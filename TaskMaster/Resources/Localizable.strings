@@ -1,7 +1,215 @@
-//
-//  Localizable.strings
-//  TaskMaster
-//
-//  Created by rinka on 2025/03/19.
-//
+/*
+  Localizable.strings
+  TaskMaster
+  
+  Created by rinka on 2025/03/19.
+  
+*/
 
+// MARK: - 共通
+"app_name" = "TaskMaster";
+"ok" = "OK";
+"cancel" = "キャンセル";
+"save" = "保存";
+"delete" = "削除";
+"edit" = "編集";
+"done" = "完了";
+"close" = "閉じる";
+"confirm" = "確認";
+"back" = "戻る";
+"next" = "次へ";
+"create" = "作成";
+"update" = "更新";
+"search" = "検索";
+"filter" = "フィルター";
+"sort" = "並べ替え";
+"settings" = "設定";
+"error" = "エラー";
+"warning" = "警告";
+"success" = "成功";
+"required" = "必須";
+"optional" = "任意";
+
+// MARK: - タブ名
+"tab_home" = "ホーム";
+"tab_tasks" = "タスク";
+"tab_projects" = "プロジェクト";
+"tab_calendar" = "カレンダー";
+"tab_statistics" = "統計";
+
+// MARK: - 優先度
+"priority_high" = "高";
+"priority_medium" = "中";
+"priority_low" = "低";
+
+// MARK: - ステータス
+"status_not_started" = "未着手";
+"status_in_progress" = "進行中";
+"status_completed" = "完了";
+"status_postponed" = "延期";
+"status_cancelled" = "キャンセル";
+
+// MARK: - タスク関連
+"task_title" = "タイトル";
+"task_description" = "説明";
+"task_due_date" = "期限日";
+"task_reminder" = "リマインダー";
+"task_priority" = "優先度";
+"task_status" = "ステータス";
+"task_project" = "プロジェクト";
+"task_tags" = "タグ";
+"task_repeating" = "繰り返し";
+"task_create" = "タスクを作成";
+"task_update" = "タスクを更新";
+"task_delete_confirm" = "このタスクを削除しますか？";
+"task_delete_warning" = "この操作は元に戻せません。";
+"task_complete" = "タスクを完了にする";
+"task_uncomplete" = "タスクを未完了に戻す";
+"task_all" = "すべてのタスク";
+"task_today" = "今日のタスク";
+"task_upcoming" = "予定されたタスク";
+"task_overdue" = "期限切れのタスク";
+"task_completed" = "完了したタスク";
+"task_high_priority" = "高優先度タスク";
+"task_no_tasks" = "タスクはまだありません";
+"task_no_tasks_today" = "今日のタスクはありません";
+"task_no_tasks_upcoming" = "予定されたタスクはありません";
+"task_no_tasks_overdue" = "期限切れのタスクはありません";
+"task_no_tasks_completed" = "完了したタスクはありません";
+"task_no_tasks_high_priority" = "高優先度のタスクはありません";
+"task_create_new" = "新しいタスクを作成";
+"task_mark_completed" = "完了にする";
+"task_mark_not_completed" = "未完了に戻す";
+"task_see_all" = "すべて見る";
+
+// MARK: - プロジェクト関連
+"project_name" = "プロジェクト名";
+"project_description" = "説明";
+"project_color" = "カラー";
+"project_due_date" = "期限日";
+"project_create" = "プロジェクトを作成";
+"project_update" = "プロジェクトを更新";
+"project_delete_confirm" = "このプロジェクトを削除しますか？";
+"project_delete_warning" = "関連するタスクは削除されませんが、プロジェクトとの関連付けは解除されます。";
+"project_mark_completed" = "プロジェクトを完了にする";
+"project_mark_not_completed" = "プロジェクトを未完了に戻す";
+"project_progress" = "進捗状況";
+"project_tasks" = "タスク一覧";
+"project_no_projects" = "プロジェクトがありません";
+"project_create_new" = "新しいプロジェクトを作成";
+"project_active" = "進行中のプロジェクト";
+"project_all" = "すべてのプロジェクト";
+"project_completed" = "完了したプロジェクト";
+"project_filter_all" = "すべて";
+"project_filter_incomplete" = "未完了";
+"project_filter_completed" = "完了";
+"project_filter_overdue" = "期限切れ";
+"project_filter_today" = "今日";
+"project_filter_upcoming" = "今後";
+"project_no_description" = "説明はありません";
+"project_no_tasks" = "このプロジェクトにはまだタスクがありません。";
+"project_tasks_count" = "%d タスク";
+
+// MARK: - タグ関連
+"tag_name" = "タグ名";
+"tag_color" = "カラー";
+"tag_create" = "タグを作成";
+"tag_update" = "タグを更新";
+"tag_delete_confirm" = "このタグを削除しますか？";
+"tag_delete_warning" = "関連するタスクは削除されませんが、タグとの関連付けは解除されます。";
+"tag_no_tags" = "タグがありません";
+"tag_create_new" = "新しいタグを作成";
+"tag_all" = "すべてのタグ";
+"tag_active" = "使用中のタグ";
+"tag_tasks_count" = "%d タスク";
+
+// MARK: - カレンダー関連
+"calendar_month_view" = "月表示";
+"calendar_week_view" = "週表示";
+"calendar_today" = "今日";
+"calendar_no_events" = "イベントがありません";
+"calendar_add_task" = "タスクを追加";
+"calendar_integration" = "カレンダー連携";
+"calendar_permission_title" = "カレンダーへのアクセス";
+"calendar_permission_message" = "カレンダーへのアクセスを許可すると、タスクをiOSカレンダーに同期できます。";
+"calendar_permission_denied" = "カレンダーへのアクセスが許可されていません。設定アプリから許可してください。";
+
+// MARK: - 統計関連
+"statistics_completion_rate" = "タスク完了率";
+"statistics_tasks_completed_week" = "今週の完了タスク";
+"statistics_task_stats" = "タスク統計";
+"statistics_on_time_completion" = "期限内完了率";
+"statistics_active_projects" = "活動プロジェクト";
+"statistics_overdue_tasks" = "期限切れタスク";
+"statistics_priority_distribution" = "優先度分布";
+"statistics_weekly_activity" = "週間タスク完了実績";
+"statistics_project_progress" = "プロジェクト進捗";
+"statistics_timeframe_week" = "週";
+"statistics_timeframe_month" = "月";
+"statistics_timeframe_year" = "年";
+"statistics_timeframe_all" = "全期間";
+"statistics_category_tasks" = "タスク";
+"statistics_category_projects" = "プロジェクト";
+"statistics_category_tags" = "タグ";
+"statistics_category_time" = "時間";
+"statistics_total" = "合計";
+"statistics_completed" = "完了";
+"statistics_incomplete" = "未完了";
+"statistics_show_all_projects" = "すべてのプロジェクトを表示...";
+
+// MARK: - 時間表現
+"time_today" = "今日";
+"time_tomorrow" = "明日";
+"time_yesterday" = "昨日";
+"time_days_ago" = "%d日前";
+"time_days_later" = "%d日後";
+"time_weeks_ago" = "%d週間前";
+"time_weeks_later" = "%d週間後";
+"time_months_ago" = "%dヶ月前";
+"time_months_later" = "%dヶ月後";
+"time_years_ago" = "%d年前";
+"time_years_later" = "%d年後";
+"time_monday" = "月";
+"time_tuesday" = "火";
+"time_wednesday" = "水";
+"time_thursday" = "木";
+"time_friday" = "金";
+"time_saturday" = "土";
+"time_sunday" = "日";
+"time_overdue" = "%d日経過";
+"time_days_left" = "あと%d日";
+
+// MARK: - 繰り返し設定
+"repeat_none" = "なし";
+"repeat_daily" = "毎日";
+"repeat_weekdays" = "平日";
+"repeat_weekly" = "毎週";
+"repeat_monthly" = "毎月";
+"repeat_yearly" = "毎年";
+"repeat_custom" = "カスタム";
+
+// MARK: - エラーメッセージ
+"error_title_required" = "タイトルは必須です";
+"error_name_required" = "名前は必須です";
+"error_date_invalid" = "日付が無効です";
+"error_save_failed" = "保存に失敗しました";
+"error_load_failed" = "読み込みに失敗しました";
+"error_delete_failed" = "削除に失敗しました";
+"error_calendar_access" = "カレンダーへのアクセスに失敗しました";
+
+// MARK: - 設定
+"settings_notifications" = "通知";
+"settings_theme" = "テーマ";
+"settings_language" = "言語";
+"settings_backup" = "バックアップ";
+"settings_restore" = "復元";
+"settings_about" = "アプリについて";
+"settings_version" = "バージョン";
+"settings_help" = "ヘルプ";
+"settings_feedback" = "フィードバック";
+"settings_privacy" = "プライバシーポリシー";
+"settings_terms" = "利用規約";
+"settings_daily_reminder" = "デイリーリマインダー";
+"settings_daily_reminder_time" = "リマインダー時間";
+"settings_weekly_report" = "週次レポート";
+"settings_sync" = "同期設定";
