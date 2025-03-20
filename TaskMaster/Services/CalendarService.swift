@@ -26,8 +26,8 @@ class CalendarService {
     /// カレンダーへのアクセス許可状態を確認
     func checkAuthorizationStatus() {
         if #available(iOS 17.0, *) {
-            // iOS 17以降では、インスタンスメソッドを使用
-            self.authorizationStatus = eventStore.authorizationStatus(for: .event)
+            // iOS 17以降でもクラスメソッドを使用
+            self.authorizationStatus = EKEventStore.authorizationStatus(for: .event)
         } else {
             // iOS 17より前はクラスメソッドを使用
             self.authorizationStatus = EKEventStore.authorizationStatus(for: .event)

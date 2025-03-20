@@ -46,9 +46,8 @@ class DataService: DataServiceProtocol {
     
     // 初期化
     private init() {
-        let appDelegate = UIApplication.shared.delegate as! AppDelegate
-        let container = appDelegate.persistentContainer
-        viewContext = container.viewContext
+        let persistenceController = PersistenceController.shared
+        viewContext = persistenceController.container.viewContext
         
         // サンプルデータがなければ追加
         checkAndCreateSampleData()

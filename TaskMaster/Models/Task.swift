@@ -112,8 +112,8 @@ struct TMTask: Identifiable, Codable, Hashable {
     
     // 完全な初期化メソッド
     init(id: UUID = UUID(), title: String, description: String? = nil,
-         creationDate: Date = Date(), dueDate: Date? = nil, completionDate: Date? = nil,
-         priority: Priority = .medium, status: TaskStatus = .notStarted,
+         creationDate: Date = Date(), dueDate: Date? = nil,
+         priority: Priority = .medium, completionDate: Date? = nil, status: TaskStatus = .notStarted,
          projectId: UUID? = nil, tagIds: [UUID] = [], isRepeating: Bool = false,
          repeatType: RepeatType = .none, repeatCustomValue: Int? = nil,
          reminderDate: Date? = nil, parentTaskId: UUID? = nil, subTaskIds: [UUID] = []) {
