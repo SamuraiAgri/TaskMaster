@@ -214,168 +214,131 @@ struct CalendarView: View {
             calendarViewModel.loadEvents()
         }) {
             VStack {
-                // 日付セル
-                    private func dayCell(date: Date) -> some View {
-                        let isSelected = Calendar.current.isDate(date, inSameDayAs: calendarViewModel.selectedDate)
-                        let isToday = Calendar.current.isDateInToday(date)
-                        let isCurrentMonth = Calendar.current.component(.month, from: date) == currentMonth
-                        let day = Calendar.current.component(.day, from: date)
-                        
-                        return Button(action: {
-                            calendarViewModel.selectDate(date)
-                            calendarViewModel.loadEvents()
-                        }) {
-                            VStack {
-                                Text("\(day)")
-                                    .font(Font.system(size: DesignSystem.Typography.callout, weight: isSelected || isToday ? .bold : .regular))
-                                    .foregroundColor(dayTextColor(isSelected: isSelected, isToday: isToday, isCurrentMonth: isCurrentMonth))
-                                
-                                // タスク数のインジケーター
-                                let tasksCount = calendarViewModel.numberOfEvents(for: date)
-                                if tasksCount > 0 {
-                                    Text("\(tasksCount)")
-                                        .font(Font.system(size: DesignSystem.Typography.caption2))
-                                        .foregroundColor(.white)
-                                        .padding(.horizontal, 6)
-                                        .padding(.vertical, 2)
-                                        .background(DesignSystem.Colors.primary)
-                                        .cornerRadius(10)
-                                }
-                            }
-                            .frame(maxWidth: .infinity, maxHeight: .infinity)
-                            .background(isSelected ? DesignSystem.Colors.primary.opacity(0.1) : Color.clear)
-                            .cornerRadius(DesignSystem.CornerRadius.small)
+                Text("\(day)")
+                    .font(Font.system(size: DesignSystem.Typography.callout, weight: isSelected || isToday ? .bold : .regular))
+                    .foregroundColor(dayTextColor(isSelected: isSelected, isToday: isToday, isCurrentMonth: isCurrentMonth))
+                
+                // タスク数のインジケーター
+                let tasksCount = calendarViewModel.numberOfEvents(for: date)
+                if tasksCount > 0 {
+                    Text("\(tasksCount)")
+                        .font(Font.system(size: DesignSystem.Typography.caption2))
+                        .foregroundColor(.white)
+                        .padding(.horizontal, 6)
+                        .padding(.vertical, 2)
+                        .background(DesignSystem.Colors.primary)
+                        .cornerRadius(10)
+                }
+            }
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+            .background(isSelected ? DesignSystem.Colors.primary.opacity(0.1) : Color.clear)
+            .cornerRadius(DesignSystem.CornerRadius.small)
+            .overlay(
+                Circle()
+                    .fill(isToday ? DesignSystem.Colors.error : Color.clear)
+                    .frame(width: 5, height: 5)
+                    .offset(y: 12),
+                alignment: .bottom
+            )
+        }
+    }
+    
+    // 選択された日付のタスク一覧
+    private var selectedDateTasksView: some View {
+        VStack(alignment: .leading, spacing: DesignSystem.Spacing.m) {
+            HStack {
+                Text(calendarViewModel.selectedDate.formatted(style: .medium))
+                    .font(Font.system(size: DesignSystem.Typography.headline, weight: .semibold))
+                
+                Spacer()
+                
+                Button(action: {
+                    calendarViewModel.goToToday()
+                }) {
+                    Text("今日")
+                        .font(Font.system(size: DesignSystem.Typography.subheadline))
+                        .foregroundColor(DesignSystem.Colors.primary)
+                }
+            }
+            .padding(.horizontal)
+            .padding(.top)
+            
+            let events = calendarViewModel.eventsForDate(calendarViewModel.selectedDate)
+            let tasksForSelectedDate = events.filter { $0.type == .task }
+            
+            if tasksForSelectedDate.isEmpty {
+                VStack {
+                    Text("タスクがありません")
+                        .font(Font.system(size: DesignSystem.Typography.body))
+                        .foregroundColor(DesignSystem.Colors.textSecondary)
+                        .padding()
+                    
+                    Button(action: {
+                        showingNewTaskSheet = true
+                    }) {
+                        Text("タスクを追加")
+                            .font(Font.system(size: DesignSystem.Typography.callout, weight: .medium))
+                            .foregroundColor(DesignSystem.Colors.primary)
+                            .padding()
                             .overlay(
-                                Circle()
-                                    .fill(isToday ? DesignSystem.Colors.error : Color.clear)
-                                    .frame(width: 5, height: 5)
-                                    .offset(y: 12),
-                                alignment: .bottom
+                                RoundedRectangle(cornerRadius: DesignSystem.CornerRadius.small)
+                                    .stroke(DesignSystem.Colors.primary, lineWidth: 1)
                             )
-                        }
                     }
-                    
-                    // 選択された日付のタスク一覧
-                    private var selectedDateTasksView: some View {
-                        VStack(alignment: .leading, spacing: DesignSystem.Spacing.m) {
-                            HStack {
-                                Text(calendarViewModel.selectedDate.formatted(style: .medium))
-                                    .font(Font.system(size: DesignSystem.Typography.headline, weight: .semibold))
-                                
-                                Spacer()
-                                
-                                Button(action: {
-                                    calendarViewModel.goToToday()
-                                }) {
-                                    Text("今日")
-                                        .font(Font.system(size: DesignSystem.Typography.subheadline))
-                                        .foregroundColor(DesignSystem.Colors.primary)
+                }
+                .frame(maxWidth: .infinity)
+                .padding()
+            } else {
+                ScrollView {
+                    VStack(spacing: DesignSystem.Spacing.s) {
+                        ForEach(tasksForSelectedDate) { event in
+                            if let task = taskViewModel.getTask(by: event.id) {
+                                NavigationLink(destination: TaskDetailView(taskId: task.id)) {
+                                    TaskRowView(task: task)
                                 }
-                            }
-                            .padding(.horizontal)
-                            .padding(.top)
-                            
-                            let events = calendarViewModel.eventsForDate(calendarViewModel.selectedDate)
-                            let tasksForSelectedDate = events.filter { $0.type == .task }
-                            
-                            if tasksForSelectedDate.isEmpty {
-                                VStack {
-                                    Text("タスクがありません")
-                                        .font(Font.system(size: DesignSystem.Typography.body))
-                                        .foregroundColor(DesignSystem.Colors.textSecondary)
-                                        .padding()
-                                    
-                                    Button(action: {
-                                        showingNewTaskSheet = true
-                                    }) {
-                                        Text("タスクを追加")
-                                            .font(Font.system(size: DesignSystem.Typography.callout, weight: .medium))
-                                            .foregroundColor(DesignSystem.Colors.primary)
-                                            .padding()
-                                            .overlay(
-                                                RoundedRectangle(cornerRadius: DesignSystem.CornerRadius.small)
-                                                    .stroke(DesignSystem.Colors.primary, lineWidth: 1)
-                                            )
-                                    }
-                                }
-                                .frame(maxWidth: .infinity)
-                                .padding()
-                            } else {
-                                ScrollView {
-                                    VStack(spacing: DesignSystem.Spacing.s) {
-                                        ForEach(tasksForSelectedDate) { event in
-                                            if let task = taskViewModel.getTask(by: event.id) {
-                                                NavigationLink(destination: TaskDetailView(taskId: task.id)) {
-                                                    TaskRowView(task: task)
-                                                }
-                                                .buttonStyle(PlainButtonStyle())
-                                                .background(DesignSystem.Colors.card)
-                                                .cornerRadius(DesignSystem.CornerRadius.medium)
-                                                .padding(.horizontal)
-                                            }
-                                        }
-                                    }
-                                    .padding(.bottom)
-                                }
+                                .buttonStyle(PlainButtonStyle())
+                                .background(DesignSystem.Colors.card)
+                                .cornerRadius(DesignSystem.CornerRadius.medium)
+                                .padding(.horizontal)
                             }
                         }
-                        .frame(maxHeight: .infinity, alignment: .top)
-                        .background(DesignSystem.Colors.background)
                     }
-                    
-                    // ヘルパーメソッド
-                    
-                    // 年月の表示用フォーマット
-                    private var formattedYearMonth: String {
-                        let components = DateComponents(year: currentYear, month: currentMonth)
-                        if let date = Calendar.current.date(from: components) {
-                            return dateFormatter.string(from: date)
-                        }
-                        return ""
-                    }
-                    
-                    // 月を移動する
-                    private func moveMonth(by value: Int) {
-                        calendarViewModel.changeMonth(by: value)
-                        currentMonth = Calendar.current.component(.month, from: calendarViewModel.currentDate)
-                        currentYear = Calendar.current.component(.year, from: calendarViewModel.currentDate)
-                    }
-                    
-                    // 日付の文字色を決定
-                    private func dayTextColor(isSelected: Bool, isToday: Bool, isCurrentMonth: Bool) -> Color {
-                        if isSelected {
-                            return DesignSystem.Colors.primary
-                        } else if isToday {
-                            return DesignSystem.Colors.error
-                        } else if !isCurrentMonth {
-                            return DesignSystem.Colors.textSecondary.opacity(0.5)
-                        } else {
-                            return DesignSystem.Colors.textPrimary
-                        }
-                    }
+                    .padding(.bottom)
                 }
-
-                // 角丸の設定
-                extension View {
-                    func cornerRadius(_ radius: CGFloat, corners: UIRectCorner) -> some View {
-                        clipShape(RoundedCorner(radius: radius, corners: corners))
-                    }
-                }
-
-                // カスタム角丸形状
-                struct RoundedCorner: Shape {
-                    var radius: CGFloat = .infinity
-                    var corners: UIRectCorner = .allCorners
-                    
-                    func path(in rect: CGRect) -> Path {
-                        let path = UIBezierPath(roundedRect: rect, byRoundingCorners: corners, cornerRadii: CGSize(width: radius, height: radius))
-                        return Path(path.cgPath)
-                    }
-                }
-
-                struct CalendarView_Previews: PreviewProvider {
-                    static var previews: some View {
-                        CalendarView()
-                            .environmentObject(TaskViewModel())
-                    }
-                }
+            }
+        }
+        .frame(maxHeight: .infinity, alignment: .top)
+        .background(DesignSystem.Colors.background)
+    }
+    
+    // ヘルパーメソッド
+    
+    // 年月の表示用フォーマット
+    private var formattedYearMonth: String {
+        let components = DateComponents(year: currentYear, month: currentMonth)
+        if let date = Calendar.current.date(from: components) {
+            return dateFormatter.string(from: date)
+        }
+        return ""
+    }
+    
+    // 月を移動する
+    private func moveMonth(by value: Int) {
+        calendarViewModel.changeMonth(by: value)
+        currentMonth = Calendar.current.component(.month, from: calendarViewModel.currentDate)
+        currentYear = Calendar.current.component(.year, from: calendarViewModel.currentDate)
+    }
+    
+    // 日付の文字色を決定
+    private func dayTextColor(isSelected: Bool, isToday: Bool, isCurrentMonth: Bool) -> Color {
+        if isSelected {
+            return DesignSystem.Colors.primary
+        } else if isToday {
+            return DesignSystem.Colors.error
+        } else if !isCurrentMonth {
+            return DesignSystem.Colors.textSecondary.opacity(0.5)
+        } else {
+            return DesignSystem.Colors.textPrimary
+        }
+    }
+}

@@ -204,13 +204,13 @@ struct ProjectCardItem: View {
         VStack(alignment: .leading, spacing: DesignSystem.Spacing.s) {
             // プロジェクト名とステータス
             HStack {
-                Text(project.name)
+                Text(project.name ?? "")
                     .font(DesignSystem.Typography.font(size: DesignSystem.Typography.headline, weight: .semibold))
                     .foregroundColor(DesignSystem.Colors.textPrimary)
                 
                 Spacer()
                 
-                if project.isCompleted {
+                if project.completionDate != nil {
                     Text("完了")
                         .font(DesignSystem.Typography.font(size: DesignSystem.Typography.caption1))
                         .foregroundColor(.white)
@@ -222,7 +222,7 @@ struct ProjectCardItem: View {
             }
             
             // 説明（あれば）
-            if let description = project.description, !description.isEmpty {
+            if let description = project.projectDescription, !description.isEmpty {
                 Text(description)
                     .font(DesignSystem.Typography.font(size: DesignSystem.Typography.subheadline))
                     .foregroundColor(DesignSystem.Colors.textSecondary)
@@ -232,8 +232,9 @@ struct ProjectCardItem: View {
             
             // タスク数と期限
             HStack {
+                let taskCount = project.tasks?.count ?? 0
                 Label {
-                    Text("\(project.taskIds.count) タスク")
+                    Text("\(taskCount) タスク")
                         .font(DesignSystem.Typography.font(size: DesignSystem.Typography.footnote))
                         .foregroundColor(DesignSystem.Colors.textSecondary)
                 } icon: {
@@ -245,13 +246,14 @@ struct ProjectCardItem: View {
                 Spacer()
                 
                 if let dueDate = project.dueDate {
+                    let isOverdue = dueDate < Date() && project.completionDate == nil
                     Label {
                         Text(dueDate.formatted(with: "yyyy/MM/dd"))
                             .font(DesignSystem.Typography.font(size: DesignSystem.Typography.footnote))
-                            .foregroundColor(project.isOverdue ? DesignSystem.Colors.error : DesignSystem.Colors.textSecondary)
+                            .foregroundColor(isOverdue ? DesignSystem.Colors.error : DesignSystem.Colors.textSecondary)
                     } icon: {
                         Image(systemName: "calendar")
-                            .foregroundColor(project.isOverdue ? DesignSystem.Colors.error : DesignSystem.Colors.textSecondary)
+                            .foregroundColor(isOverdue ? DesignSystem.Colors.error : DesignSystem.Colors.textSecondary)
                             .font(.system(size: 12))
                     }
                 }
@@ -260,7 +262,7 @@ struct ProjectCardItem: View {
             // 進捗バー
             let progress = projectViewModel.calculateProgress(for: project, tasks: taskViewModel.tasks)
             HStack(spacing: DesignSystem.Spacing.s) {
-                ProgressBarView(value: progress, color: project.color, height: 8)
+                ProgressBarView(value: progress, color: Color(hex: project.colorHex ?? "#4A90E2") ?? .blue, height: 8)
                 
                 Text("\(Int(progress * 100))%")
                     .font(DesignSystem.Typography.font(size: DesignSystem.Typography.caption1))
@@ -271,10 +273,10 @@ struct ProjectCardItem: View {
         .padding()
         .background(DesignSystem.Colors.card)
         .cornerRadius(DesignSystem.CornerRadius.medium)
-        .withShadow(DesignSystem.Shadow.small)
+        .shadow(color: Color.black.opacity(0.1), radius: 4, x: 0, y: 2)
         .overlay(
             Rectangle()
-                .fill(project.color)
+                .fill(Color(hex: project.colorHex ?? "#4A90E2") ?? .blue)
                 .frame(width: 4)
                 .cornerRadius(DesignSystem.CornerRadius.small, corners: [.topLeft, .bottomLeft]),
             alignment: .leading
@@ -282,85 +284,42 @@ struct ProjectCardItem: View {
     }
 }
 
-// シャドウ拡張
+// 角丸の拡張
+struct TMRoundedCorner: Shape {
+    var radius: CGFloat = .infinity
+    var corners: UIRectCorner = .allCorners
+    
+    func path(in rect: CGRect) -> Path {
+        let path = UIBezierPath(roundedRect: rect, byRoundingCorners: corners, cornerRadii: CGSize(width: radius, height: radius))
+        return Path(path.cgPath)
+    }
+}
+
+// ビューの拡張
 extension View {
-    func withShadow(_ shadow: Shadow) -> some View {
+    func cornerRadius(_ radius: CGFloat, corners: UIRectCorner) -> some View {
+        clipShape(TMRoundedCorner(radius: radius, corners: corners))
+    }
+    
+    func withShadow(_ style: TMShadowStyle) -> some View {
         self.shadow(
-            color: shadow.color,
-            radius: shadow.radius,
-            x: shadow.x,
-            y: shadow.y
+            color: style.color,
+            radius: style.radius,
+            x: style.x,
+            y: style.y
         )
     }
 }
 
-// シャドウ定義
-struct Shadow {
+// シャドウスタイル
+struct TMShadowStyle {
     let color: Color
     let radius: CGFloat
     let x: CGFloat
     let y: CGFloat
 }
 
-// デザインシステム
-enum DesignSystem {
-    enum Colors {
-        static let primary = Color(hex: "#4A90E2") ?? .blue
-        static let secondary = Color(hex: "#9B9B9B") ?? .gray
-        static let accent = Color(hex: "#50C356") ?? .green
-        static let error = Color(hex: "#E24A6E") ?? .red
-        static let warning = Color(hex: "#E2A64A") ?? .orange
-        static let success = Color(hex: "#50C356") ?? .green
-        static let info = Color(hex: "#4A90E2") ?? .blue
-        
-        static let background = Color(hex: "#F9F9F9") ?? .white
-        static let card = Color.white
-        
-        static let textPrimary = Color(hex: "#333333") ?? .black
-        static let textSecondary = Color(hex: "#777777") ?? .gray
-    }
-    
-    enum Typography {
-        static let largeTitle: CGFloat = 34
-        static let title1: CGFloat = 28
-        static let title2: CGFloat = 22
-        static let title3: CGFloat = 20
-        static let headline: CGFloat = 17
-        static let body: CGFloat = 17
-        static let callout: CGFloat = 16
-        static let subheadline: CGFloat = 15
-        static let footnote: CGFloat = 13
-        static let caption1: CGFloat = 12
-        static let caption2: CGFloat = 11
-        
-        static func font(size: CGFloat, weight: Font.Weight = .regular) -> Font {
-            return Font.system(size: size, weight: weight)
-        }
-    }
-    
-    enum Spacing {
-        static let xxs: CGFloat = 4
-        static let xs: CGFloat = 8
-        static let s: CGFloat = 12
-        static let m: CGFloat = 16
-        static let l: CGFloat = 24
-        static let xl: CGFloat = 32
-        static let xxl: CGFloat = 48
-    }
-    
-    enum CornerRadius {
-        static let small: CGFloat = 8
-        static let medium: CGFloat = 12
-        static let large: CGFloat = 16
-    }
-    
-    enum Shadow {
-        static let small = DesignSystem.Shadow(color: .black.opacity(0.1), radius: 4, x: 0, y: 2)
-        static let medium = DesignSystem.Shadow(color: .black.opacity(0.15), radius: 8, x: 0, y: 4)
-        static let large = DesignSystem.Shadow(color: .black.opacity(0.2), radius: 16, x: 0, y: 8)
-    }
-}
-
+// プレビュー
 struct ProjectListView_Previews: PreviewProvider {
     static var previews: some View {
         ProjectListView()

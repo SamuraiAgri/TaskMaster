@@ -4,7 +4,6 @@ import SwiftUI
 
 class StatisticsViewModel: ObservableObject {
     // 公開プロパティ
-    @Published var statistics: Statistics = Statistics()
     @Published var selectedTimeFrame: TimeFrame = .week
     @Published var selectedCategory: StatisticsCategory = .tasks
     @Published var isLoading: Bool = false
@@ -142,224 +141,199 @@ class StatisticsViewModel: ObservableObject {
     /// 主要な統計情報を計算
     private func calculateStatistics(tasks: [Task], allTasks: [Task], projects: [Project], tags: [Tag]) {
         // 総タスク数
-        statistics.totalTasks = allTasks.count
+        let totalTasks = allTasks.count
         
         // 完了タスク数
-        /// 主要な統計情報を計算
-            private func calculateStatistics(tasks: [Task], allTasks: [Task], projects: [Project], tags: [Tag]) {
-                // 総タスク数
-                statistics.totalTasks = allTasks.count
-                
-                // 完了タスク数
-                let completedTasks = tasks.filter { $0.isCompleted }
-                statistics.completedTasks = completedTasks.count
-                
-                // 完了率
-                statistics.completionRate = tasks.isEmpty ? 0 : Double(completedTasks.count) / Double(tasks.count)
-                
-                // 期限内に完了したタスク数
-                let tasksCompletedOnTime = completedTasks.filter { task in
-                    if let dueDate = task.dueDate, let completionDate = task.completionDate {
-                        return completionDate <= dueDate
-                    }
-                    return false
+        let completedTasks = tasks.filter { $0.completionDate != nil }
+        let completedTasksCount = completedTasks.count
+        
+        // 完了率
+        let completionRate = tasks.isEmpty ? 0 : Double(completedTasksCount) / Double(tasks.count)
+        
+        // 期限内に完了したタスク数
+        let tasksCompletedOnTime = completedTasks.filter { task in
+            if let dueDate = task.dueDate, let completionDate = task.completionDate {
+                return completionDate <= dueDate
+            }
+            return false
+        }
+        let tasksCompletedOnTimeCount = tasksCompletedOnTime.count
+        
+        // 期限内完了率
+        let onTimeCompletionRate = completedTasks.isEmpty ? 0 : Double(tasksCompletedOnTimeCount) / Double(completedTasksCount)
+        
+        // 優先度別タスク数
+        let highPriorityTasks = tasks.filter { Int(task.priority) == 3 }.count
+        let mediumPriorityTasks = tasks.filter { Int(task.priority) == 2 }.count
+        let lowPriorityTasks = tasks.filter { Int(task.priority) == 1 }.count
+        
+        // 週間データの計算
+        let calendar = Calendar.current
+        let today = calendar.startOfDay(for: Date())
+        let weekday = calendar.component(.weekday, from: today)
+        
+        // 週の始まりを月曜日にする調整
+        let daysToMonday = weekday == 1 ? -6 : -(weekday - 2)
+        
+        if let monday = calendar.date(byAdding: .day, value: daysToMonday, to: today),
+           let nextMonday = calendar.date(byAdding: .day, value: 7, to: monday) {
+            
+            let weekRange = monday..<nextMonday
+            
+            // 今週完了したタスク
+            let thisWeekCompletedTasks = allTasks.filter { task in
+                if let completionDate = task.completionDate {
+                    return weekRange.contains(completionDate)
                 }
-                statistics.tasksCompletedOnTime = tasksCompletedOnTime.count
+                return false
+            }
+            
+            let tasksCompletedThisWeekCount = thisWeekCompletedTasks.count
+            
+            // 曜日別の完了タスク数
+            var dayCompletions = [Int](repeating: 0, count: 7)
+            
+            for task in thisWeekCompletedTasks {
+                if let completionDate = task.completionDate {
+                    let weekdayIndex = calendar.component(.weekday, from: completionDate)
+                    // 配列に合わせて調整（0=月曜日, 1=火曜日, ..., 6=日曜日）
+                    let adjustedIndex = (weekdayIndex + 5) % 7
+                    dayCompletions[adjustedIndex] += 1
+                }
+            }
+            
+            // 値を更新
+            self.weeklyCompletions = dayCompletions.enumerated().map { (index, count) in
+                DailyCompletion(
+                    day: index,
+                    date: calendar.date(byAdding: .day, value: index, to: monday) ?? Date(),
+                    count: count
+                )
+            }
+        }
+        
+        // アクティブなプロジェクト数
+        let activeProjectsCount = projects.filter { $0.completionDate == nil }.count
+        
+        // 完了したプロジェクト数
+        let completedProjectsCount = projects.filter { $0.completionDate != nil }.count
+        
+        // 使用中のタグ数
+        let activeTagsCount = tags.count
+    }
+    
+    /// プロジェクトの進捗状況を計算
+    private func calculateProjectsProgress(tasks: [Task], projects: [Project]) {
+        var progress: [ProjectProgress] = []
+        
+        for project in projects {
+            let projectTasks = tasks.filter { task in
+                task.project?.id == project.id
+            }
+            
+            if !projectTasks.isEmpty {
+                let completedTasks = projectTasks.filter { $0.completionDate != nil }.count
+                let progressValue = Double(completedTasks) / Double(projectTasks.count)
                 
-                // 期限内完了率
-                statistics.onTimeCompletionRate = completedTasks.isEmpty ? 0 : Double(tasksCompletedOnTime.count) / Double(completedTasks.count)
-                
-                // 優先度別タスク数
-                statistics.highPriorityTasks = tasks.filter { $0.priority == .high }.count
-                statistics.mediumPriorityTasks = tasks.filter { $0.priority == .medium }.count
-                statistics.lowPriorityTasks = tasks.filter { $0.priority == .low }.count
-                
-                // 今週のタスク完了数
-                let calendar = Calendar.current
-                let today = calendar.startOfDay(for: Date())
-                let weekday = calendar.component(.weekday, from: today)
-                let daysToMonday = weekday == 1 ? -6 : -(weekday - 2) // 月曜日を週の初めとする
-                
-                if let monday = calendar.date(byAdding: .day, value: daysToMonday, to: today),
-                   let nextMonday = calendar.date(byAdding: .day, value: 7, to: monday) {
+                progress.append(ProjectProgress(
+                    id: project.id ?? UUID(),
+                    name: project.name ?? "",
+                    progress: progressValue,
+                    color: Color(hex: project.colorHex ?? "#4A90E2") ?? .blue,
+                    taskCount: projectTasks.count
+                ))
+            }
+        }
+        
+        // 進捗率でソート（降順）
+        projectsProgress = progress.sorted { $0.progress > $1.progress }
+    }
+    
+    /// タグの分布を計算
+    private func calculateTagsDistribution(tasks: [Task], tags: [Tag]) {
+        var distribution: [TagsDistribution] = []
+        
+        for tag in tags {
+            let taggedTasks = tasks.filter { task in
+                task.tags?.contains(tag) ?? false
+            }
+            
+            if !taggedTasks.isEmpty {
+                distribution.append(TagsDistribution(
+                    id: tag.id ?? UUID(),
+                    name: tag.name ?? "",
+                    count: taggedTasks.count,
+                    color: Color(hex: tag.colorHex ?? "#AAAAAA") ?? .gray
+                ))
+            }
+        }
+        
+        // タスク数でソート（降順）
+        tagsDistribution = distribution.sorted { $0.count > $1.count }
+    }
+    
+    /// 優先度の分布を計算
+    private func calculatePriorityDistribution(tasks: [Task]) {
+        let high = tasks.filter { Int(task.priority) == 3 }.count
+        let medium = tasks.filter { Int(task.priority) == 2 }.count
+        let low = tasks.filter { Int(task.priority) == 1 }.count
+        
+        priorityDistribution = [
+            PriorityDistribution(priority: .high, count: high, color: DesignSystem.Colors.error),
+            PriorityDistribution(priority: .medium, count: medium, color: DesignSystem.Colors.warning),
+            PriorityDistribution(priority: .low, count: low, color: DesignSystem.Colors.info)
+        ]
+    }
+    
+    /// ステータスの分布を計算
+    private func calculateStatusDistribution(tasks: [Task]) {
+        let notStarted = tasks.filter { task.status == "未着手" }.count
+        let inProgress = tasks.filter { task.status == "進行中" }.count
+        let completed = tasks.filter { task.status == "完了" }.count
+        let postponed = tasks.filter { task.status == "延期" }.count
+        let cancelled = tasks.filter { task.status == "キャンセル" }.count
+        
+        statusDistribution = [
+            StatusDistribution(status: .notStarted, count: notStarted, color: DesignSystem.Colors.info),
+            StatusDistribution(status: .inProgress, count: inProgress, color: DesignSystem.Colors.primary),
+            StatusDistribution(status: .completed, count: completed, color: DesignSystem.Colors.success),
+            StatusDistribution(status: .postponed, count: postponed, color: DesignSystem.Colors.warning),
+            StatusDistribution(status: .cancelled, count: cancelled, color: DesignSystem.Colors.error)
+        ]
+    }
+    
+    /// 完了タイムラインを計算（週次・月次）
+    private func calculateCompletionTimeline(tasks: [Task]) {
+        let calendar = Calendar.current
+        let today = Date()
+        
+        // 月間データの計算
+        if let monthStart = today.startOfMonth {
+            var monthlyData: [DailyCompletion] = []
+            
+            let daysInMonth = calendar.range(of: .day, in: .month, for: today)?.count ?? 30
+            
+            for day in 0..<daysInMonth {
+                if let date = calendar.date(byAdding: .day, value: day, to: monthStart) {
+                    let dayStart = calendar.startOfDay(for: date)
+                    guard let dayEnd = calendar.date(byAdding: .day, value: 1, to: dayStart) else { continue }
                     
-                    let weekRange = monday..<nextMonday
-                    
-                    // 今週完了したタスク
-                    let thisWeekCompletedTasks = allTasks.filter { task in
+                    let completedTasksForDay = tasks.filter { task in
                         if let completionDate = task.completionDate {
-                            return weekRange.contains(completionDate)
+                            return completionDate >= dayStart && completionDate < dayEnd
                         }
                         return false
                     }
                     
-                    statistics.tasksCompletedThisWeek = thisWeekCompletedTasks.count
-                    
-                    // 曜日別の完了タスク数
-                    var dayCompletions = [Int](repeating: 0, count: 7)
-                    
-                    for task in thisWeekCompletedTasks {
-                        if let completionDate = task.completionDate {
-                            let weekdayIndex = calendar.component(.weekday, from: completionDate)
-                            // weekdayIndex: 1=日曜日, 2=月曜日, ..., 7=土曜日
-                            // 配列に合わせて調整（0=月曜日, 1=火曜日, ..., 6=日曜日）
-                            let adjustedIndex = (weekdayIndex + 5) % 7
-                            dayCompletions[adjustedIndex] += 1
-                        }
-                    }
-                    
-                    statistics.dailyCompletions = dayCompletions
-                }
-                
-                // アクティブなプロジェクト数
-                statistics.activeProjects = projects.filter { !$0.isCompleted }.count
-                
-                // 完了したプロジェクト数
-                statistics.completedProjects = projects.filter { $0.isCompleted }.count
-                
-                // 使用中のタグ数
-                statistics.activeTags = tags.filter { !$0.taskIds.isEmpty }.count
-            }
-            
-            /// プロジェクトの進捗状況を計算
-            private func calculateProjectsProgress(tasks: [Task], projects: [Project]) {
-                var progress: [ProjectProgress] = []
-                
-                for project in projects {
-                    let projectTasks = tasks.filter { task in
-                        project.taskIds.contains(task.id)
-                    }
-                    
-                    if !projectTasks.isEmpty {
-                        let completedTasks = projectTasks.filter { $0.isCompleted }.count
-                        let progressValue = Double(completedTasks) / Double(projectTasks.count)
-                        
-                        progress.append(ProjectProgress(
-                            id: project.id,
-                            name: project.name,
-                            progress: progressValue,
-                            color: project.color,
-                            taskCount: projectTasks.count
-                        ))
-                    }
-                }
-                
-                // 進捗率でソート（降順）
-                projectsProgress = progress.sorted { $0.progress > $1.progress }
-            }
-            
-            /// タグの分布を計算
-            private func calculateTagsDistribution(tasks: [Task], tags: [Tag]) {
-                var distribution: [TagsDistribution] = []
-                
-                for tag in tags {
-                    let taggedTasks = tasks.filter { task in
-                        task.tagIds.contains(tag.id)
-                    }
-                    
-                    if !taggedTasks.isEmpty {
-                        distribution.append(TagsDistribution(
-                            id: tag.id,
-                            name: tag.name,
-                            count: taggedTasks.count,
-                            color: tag.color
-                        ))
-                    }
-                }
-                
-                // タスク数でソート（降順）
-                tagsDistribution = distribution.sorted { $0.count > $1.count }
-            }
-            
-            /// 優先度の分布を計算
-            private func calculatePriorityDistribution(tasks: [Task]) {
-                let high = tasks.filter { $0.priority == .high }.count
-                let medium = tasks.filter { $0.priority == .medium }.count
-                let low = tasks.filter { $0.priority == .low }.count
-                
-                priorityDistribution = [
-                    PriorityDistribution(priority: .high, count: high, color: DesignSystem.Colors.error),
-                    PriorityDistribution(priority: .medium, count: medium, color: DesignSystem.Colors.warning),
-                    PriorityDistribution(priority: .low, count: low, color: DesignSystem.Colors.info)
-                ]
-            }
-            
-            /// ステータスの分布を計算
-            private func calculateStatusDistribution(tasks: [Task]) {
-                let notStarted = tasks.filter { $0.status == .notStarted }.count
-                let inProgress = tasks.filter { $0.status == .inProgress }.count
-                let completed = tasks.filter { $0.status == .completed }.count
-                let postponed = tasks.filter { $0.status == .postponed }.count
-                let cancelled = tasks.filter { $0.status == .cancelled }.count
-                
-                statusDistribution = [
-                    StatusDistribution(status: .notStarted, count: notStarted, color: DesignSystem.Colors.info),
-                    StatusDistribution(status: .inProgress, count: inProgress, color: DesignSystem.Colors.primary),
-                    StatusDistribution(status: .completed, count: completed, color: DesignSystem.Colors.success),
-                    StatusDistribution(status: .postponed, count: postponed, color: DesignSystem.Colors.warning),
-                    StatusDistribution(status: .cancelled, count: cancelled, color: DesignSystem.Colors.error)
-                ]
-            }
-            
-            /// 完了タイムラインを計算（週次・月次）
-            private func calculateCompletionTimeline(tasks: [Task]) {
-                let calendar = Calendar.current
-                let today = Date()
-                
-                // 週間データの計算
-                if let weekStart = today.startOfWeek {
-                    var weeklyData: [DailyCompletion] = []
-                    
-                    for day in 0..<7 {
-                        if let date = calendar.date(byAdding: .day, value: day, to: weekStart) {
-                            let dayStart = calendar.startOfDay(for: date)
-                            guard let dayEnd = calendar.date(byAdding: .day, value: 1, to: dayStart) else { continue }
-                            
-                            let completedTasksForDay = tasks.filter { task in
-                                if let completionDate = task.completionDate {
-                                    return completionDate >= dayStart && completionDate < dayEnd
-                                }
-                                return false
-                            }
-                            
-                            weeklyData.append(DailyCompletion(
-                                day: day,
-                                date: date,
-                                count: completedTasksForDay.count
-                            ))
-                        }
-                    }
-                    
-                    weeklyCompletions = weeklyData
-                }
-                
-                // 月間データの計算
-                if let monthStart = today.startOfMonth {
-                    var monthlyData: [DailyCompletion] = []
-                    
-                    let daysInMonth = calendar.range(of: .day, in: .month, for: today)?.count ?? 30
-                    
-                    for day in 0..<daysInMonth {
-                        if let date = calendar.date(byAdding: .day, value: day, to: monthStart) {
-                            let dayStart = calendar.startOfDay(for: date)
-                            guard let dayEnd = calendar.date(byAdding: .day, value: 1, to: dayStart) else { continue }
-                            
-                            let completedTasksForDay = tasks.filter { task in
-                                if let completionDate = task.completionDate {
-                                    return completionDate >= dayStart && completionDate < dayEnd
-                                }
-                                return false
-                            }
-                            
-                            monthlyData.append(DailyCompletion(
-                                day: day + 1, // 1から始まる日付
-                                date: date,
-                                count: completedTasksForDay.count
-                            ))
-                        }
-                    }
-                    
-                    monthlyCompletions = monthlyData
+                    monthlyData.append(DailyCompletion(
+                        day: day + 1, // 1から始まる日付
+                        date: date,
+                        count: completedTasksForDay.count
+                    ))
                 }
             }
+            
+            monthlyCompletions = monthlyData
         }
+    }
+}
