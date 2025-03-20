@@ -4,8 +4,8 @@ import SwiftUI
 
 class ProjectViewModel: ObservableObject {
     // 公開プロパティ
-    @Published var projects: [Project] = []
-    @Published var filteredProjects: [Project] = []
+    @Published var projects: [TMProject] = []
+    @Published var filteredProjects: [TMProject] = []
     @Published var searchText: String = ""
     @Published var selectedSortOption: ProjectSortOption = .name
     @Published var isAscending: Bool = true
@@ -51,18 +51,19 @@ class ProjectViewModel: ObservableObject {
     
     // プロジェクトの読み込み
     func loadProjects() {
-        projects = dataService.fetchProjects()
+        let coreDataProjects = dataService.fetchProjects()
+        projects = coreDataProjects.map { TMProject.fromCoreData($0) }
         filterAndSortProjects()
     }
     
     // プロジェクトの追加
-    func addProject(_ project: Project) {
+    func addProject(_ project: TMProject) {
         dataService.addProject(project)
         loadProjects()
     }
     
     // プロジェクトの更新
-    func updateProject(_ project: Project) {
+    func updateProject(_ project: TMProject) {
         dataService.updateProject(project)
         loadProjects()
     }
@@ -83,12 +84,15 @@ class ProjectViewModel: ObservableObject {
     }
     
     // プロジェクトの取得（ID指定）
-    func getProject(by id: UUID) -> Project? {
-        return dataService.getProject(by: id)
+    func getProject(by id: UUID) -> TMProject? {
+        if let coreDataProject = dataService.getProject(by: id) {
+            return TMProject.fromCoreData(coreDataProject)
+        }
+        return nil
     }
     
     // プロジェクトの完了ステータス切り替え
-    func toggleProjectCompletion(_ project: Project) {
+    func toggleProjectCompletion(_ project: TMProject) {
         var updatedProject = project
         
         if project.isCompleted {
@@ -101,7 +105,7 @@ class ProjectViewModel: ObservableObject {
     }
     
     // プロジェクトの進捗状況を計算
-    func calculateProgress(for project: Project, tasks: [Task]) -> Double {
+    func calculateProgress(for project: TMProject, tasks: [TMTask]) -> Double {
         let projectTasks = tasks.filter { task in
             return project.taskIds.contains(task.id)
         }

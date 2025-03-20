@@ -3,12 +3,12 @@ import Combine
 
 class HomeViewModel: ObservableObject {
     // 公開プロパティ
-    @Published var todayTasks: [Task] = []
-    @Published var priorityTasks: [Task] = []
-    @Published var overdueTasks: [Task] = []
-    @Published var upcomingTasks: [Task] = []
-    @Published var activeProjects: [Project] = []
-    @Published var statistics: Statistics = Statistics()
+    @Published var todayTasks: [TMTask] = []
+    @Published var priorityTasks: [TMTask] = []
+    @Published var overdueTasks: [TMTask] = []
+    @Published var upcomingTasks: [TMTask] = []
+    @Published var activeProjects: [TMProject] = []
+    @Published var statistics: TMStatistics = TMStatistics()
     
     // データサービス
     private let dataService: DataServiceProtocol
@@ -31,7 +31,7 @@ class HomeViewModel: ObservableObject {
     // MARK: - 公開メソッド
     
     // データの初期化
-    func initialize(tasks: [Task], projects: [Project]) {
+    func initialize(tasks: [TMTask], projects: [TMProject]) {
         processTasks(tasks)
         processProjects(projects)
         calculateStatistics(tasks: tasks, projects: projects)
@@ -39,8 +39,31 @@ class HomeViewModel: ObservableObject {
     
     // データの読み込み
     func loadData() {
-        let tasks = dataService.fetchTasks()
-        let projects = dataService.fetchProjects()
+        let coreDataTasks = dataService.fetchTasks()
+        let coreDataProjects = dataService.fetchProjects()
+        
+        let tasks = coreDataTasks.map { task -> TMTask in
+            TMTask(
+                id: task.id ?? UUID(),
+                title: task.title ?? "",
+                description: task.taskDescription,
+                creationDate: task.creationDate ?? Date(),
+                dueDate: task.dueDate,
+                completionDate: task.completionDate,
+                priority: Priority(rawValue: Int(task.priority)) ?? .medium,
+                status: TaskStatus(rawValue: task.status ?? "") ?? .notStarted,
+                projectId: task.project?.id,
+                tagIds: Array(task.tags?.compactMap { ($0 as? Tag)?.id } ?? []),
+                isRepeating: task.isRepeating,
+                repeatType: RepeatType(rawValue: task.repeatType ?? "") ?? .none,
+                repeatCustomValue: task.repeatCustomValue != 0 ? Int(task.repeatCustomValue) : nil,
+                reminderDate: task.reminderDate,
+                parentTaskId: task.parentTask?.id,
+                subTaskIds: Array(task.subTasks?.compactMap { ($0 as? Task)?.id } ?? [])
+            )
+        }
+        
+        let projects = coreDataProjects.map { TMProject.fromCoreData($0) }
         
         initialize(tasks: tasks, projects: projects)
     }
@@ -48,7 +71,7 @@ class HomeViewModel: ObservableObject {
     // MARK: - プライベートメソッド
     
     // タスクの処理
-    private func processTasks(_ tasks: [Task]) {
+    private func processTasks(_ tasks: [TMTask]) {
         // 今日のタスク
         todayTasks = tasks.filter { task in
             if let dueDate = task.dueDate {
@@ -86,7 +109,6 @@ class HomeViewModel: ObservableObject {
         // 今後のタスク（今日以降の7日間）
         let calendar = Calendar.current
         let today = calendar.startOfDay(for: Date())
-        let dateInterval = calendar.dateInterval(of: .weekOfMonth, for: today)!
         let endDate = calendar.date(byAdding: .day, value: 7, to: today)!
         
         upcomingTasks = tasks.filter { task in
@@ -105,7 +127,7 @@ class HomeViewModel: ObservableObject {
     }
     
     // プロジェクトの処理
-    private func processProjects(_ projects: [Project]) {
+    private func processProjects(_ projects: [TMProject]) {
         // 進行中のプロジェクト（完了していないもの）
         activeProjects = projects.filter { !$0.isCompleted }
             .sorted { project1, project2 in
@@ -122,7 +144,7 @@ class HomeViewModel: ObservableObject {
     }
     
     // 統計情報の計算
-    private func calculateStatistics(tasks: [Task], projects: [Project]) {
+    private func calculateStatistics(tasks: [TMTask], projects: [TMProject]) {
         // 総タスク数
         statistics.totalTasks = tasks.count
         
@@ -193,20 +215,4 @@ class HomeViewModel: ObservableObject {
         // 完了したプロジェクト数
         statistics.completedProjects = projects.filter { $0.isCompleted }.count
     }
-}
-
-// 統計情報の構造体
-struct Statistics {
-    var totalTasks: Int = 0
-    var completedTasks: Int = 0
-    var completionRate: Double = 0
-    var tasksCompletedOnTime: Int = 0
-    var onTimeCompletionRate: Double = 0
-    var highPriorityTasks: Int = 0
-    var mediumPriorityTasks: Int = 0
-    var lowPriorityTasks: Int = 0
-    var tasksCompletedThisWeek: Int = 0
-    var dailyCompletions: [Int] = [0, 0, 0, 0, 0, 0, 0] // 月、火、水、木、金、土、日
-    var activeProjects: Int = 0
-    var completedProjects: Int = 0
 }

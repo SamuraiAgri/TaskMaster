@@ -4,8 +4,8 @@ import SwiftUI
 
 class TagViewModel: ObservableObject {
     // 公開プロパティ
-    @Published var tags: [Tag] = []
-    @Published var filteredTags: [Tag] = []
+    @Published var tags: [TMTag] = []
+    @Published var filteredTags: [TMTag] = []
     @Published var searchText: String = ""
     @Published var selectedSortOption: TagSortOption = .name
     @Published var isAscending: Bool = true
@@ -51,18 +51,19 @@ class TagViewModel: ObservableObject {
     
     // タグの読み込み
     func loadTags() {
-        tags = dataService.fetchTags()
+        let coreDataTags = dataService.fetchTags()
+        tags = coreDataTags.map { TMTag.fromCoreData($0) }
         filterAndSortTags()
     }
     
     // タグの追加
-    func addTag(_ tag: Tag) {
+    func addTag(_ tag: TMTag) {
         dataService.addTag(tag)
         loadTags()
     }
     
     // タグの更新
-    func updateTag(_ tag: Tag) {
+    func updateTag(_ tag: TMTag) {
         dataService.updateTag(tag)
         loadTags()
     }
@@ -83,14 +84,17 @@ class TagViewModel: ObservableObject {
     }
     
     // タグの取得（ID指定）
-    func getTag(by id: UUID) -> Tag? {
-        return dataService.getTag(by: id)
+    func getTag(by id: UUID) -> TMTag? {
+        if let coreDataTag = dataService.getTag(by: id) {
+            return TMTag.fromCoreData(coreDataTag)
+        }
+        return nil
     }
     
     // 複数タグの取得（ID指定）
-    func getTags(by ids: [UUID]) -> [Tag] {
+    func getTags(by ids: [UUID]) -> [TMTag] {
         return ids.compactMap { id in
-            return dataService.getTag(by: id)
+            getTag(by: id)
         }
     }
     

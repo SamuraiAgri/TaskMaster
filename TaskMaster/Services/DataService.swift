@@ -21,13 +21,15 @@ protocol DataServiceProtocol {
     // プロジェクト関連
     func fetchProjects() -> [Project]
     func getProject(by id: UUID) -> Project?
-    func saveProject(_ project: Project)
+    func addProject(_ project: TMProject)
+    func updateProject(_ project: TMProject)
     func deleteProject(id: UUID)
     
     // タグ関連
     func fetchTags() -> [Tag]
     func getTag(by id: UUID) -> Tag?
-    func saveTag(_ tag: Tag)
+    func addTag(_ tag: TMTag)
+    func updateTag(_ tag: TMTag)
     func deleteTag(id: UUID)
 }
 
@@ -44,7 +46,8 @@ class DataService: DataServiceProtocol {
     
     // 初期化
     private init() {
-        let container = (UIApplication.shared.delegate as! AppDelegate).persistentContainer
+        let appDelegate = UIApplication.shared.delegate as! AppDelegate
+        let container = appDelegate.persistentContainer
         viewContext = container.viewContext
         
         // サンプルデータがなければ追加
@@ -290,8 +293,43 @@ class DataService: DataServiceProtocol {
         }
     }
     
-    func saveProject(_ project: Project) {
+    func addProject(_ tmProject: TMProject) {
+        let project = Project(context: viewContext)
+        project.id = tmProject.id
+        project.name = tmProject.name
+        project.projectDescription = tmProject.description
+        project.colorHex = tmProject.colorHex
+        project.creationDate = tmProject.creationDate
+        project.dueDate = tmProject.dueDate
+        project.completionDate = tmProject.completionDate
+        
+        // 親プロジェクト関連付け（あれば）
+        if let parentId = tmProject.parentProjectId,
+           let parentProject = getProject(by: parentId) {
+            project.parentProject = parentProject
+        }
+        
         saveContext()
+    }
+    
+    func updateProject(_ tmProject: TMProject) {
+        if let project = getProject(by: tmProject.id) {
+            project.name = tmProject.name
+            project.projectDescription = tmProject.description
+            project.colorHex = tmProject.colorHex
+            project.dueDate = tmProject.dueDate
+            project.completionDate = tmProject.completionDate
+            
+            // 親プロジェクト関連付け（あれば）
+            if let parentId = tmProject.parentProjectId,
+               let parentProject = getProject(by: parentId) {
+                project.parentProject = parentProject
+            } else {
+                project.parentProject = nil
+            }
+            
+            saveContext()
+        }
     }
     
     func deleteProject(id: UUID) {
@@ -328,8 +366,23 @@ class DataService: DataServiceProtocol {
         }
     }
     
-    func saveTag(_ tag: Tag) {
+    func addTag(_ tmTag: TMTag) {
+        let tag = Tag(context: viewContext)
+        tag.id = tmTag.id
+        tag.name = tmTag.name
+        tag.colorHex = tmTag.colorHex
+        tag.creationDate = tmTag.creationDate
+        
         saveContext()
+    }
+    
+    func updateTag(_ tmTag: TMTag) {
+        if let tag = getTag(by: tmTag.id) {
+            tag.name = tmTag.name
+            tag.colorHex = tmTag.colorHex
+            
+            saveContext()
+        }
     }
     
     func deleteTag(id: UUID) {

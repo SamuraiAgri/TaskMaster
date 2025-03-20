@@ -65,3 +65,35 @@ enum TMTimeFrame: String, CaseIterable {
     case year = "年"
     case all = "全期間"
 }
+
+// 統計情報の構造体
+struct TMStatistics {
+    var totalTasks: Int = 0
+    var completedTasks: Int = 0
+    var completionRate: Double = 0
+    var tasksCompletedOnTime: Int = 0
+    var onTimeCompletionRate: Double = 0
+    var highPriorityTasks: Int = 0
+    var mediumPriorityTasks: Int = 0
+    var lowPriorityTasks: Int = 0
+    var tasksCompletedThisWeek: Int = 0
+    var dailyCompletions: [Int] = [0, 0, 0, 0, 0, 0, 0] // 月、火、水、木、金、土、日
+    var activeProjects: Int = 0
+    var completedProjects: Int = 0
+    var activeTags: Int = 0
+    
+    // CoreDataのStatisticsからTMStatisticsへの変換
+    static func fromCoreData(_ statistics: Statistics) -> TMStatistics {
+        var tmStats = TMStatistics()
+        
+        tmStats.totalTasks = Int(statistics.totalTasksCount)
+        tmStats.completedTasks = Int(statistics.completedTasksCount)
+        tmStats.completionRate = statistics.completionRate
+        tmStats.onTimeCompletionRate = statistics.onTimeCompletionRate
+        tmStats.highPriorityTasks = Int(statistics.highPriorityCompletedCount)
+        tmStats.mediumPriorityTasks = Int(statistics.mediumPriorityCompletedCount)
+        tmStats.lowPriorityTasks = Int(statistics.lowPriorityCompletedCount)
+        
+        return tmStats
+    }
+}

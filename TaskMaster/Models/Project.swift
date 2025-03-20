@@ -2,7 +2,7 @@ import Foundation
 import SwiftUI
 
 // プロジェクトモデル
-struct Project: Identifiable, Codable, Hashable {
+struct TMProject: Identifiable, Codable, Hashable {
     var id: UUID = UUID()
     var name: String
     var description: String?
@@ -68,35 +68,51 @@ struct Project: Identifiable, Codable, Hashable {
         self.parentProjectId = parentProjectId
         self.subProjectIds = subProjectIds
     }
+    
+    // CoreDataのProjectからTMProjectへの変換
+    static func fromCoreData(_ project: Project) -> TMProject {
+        return TMProject(
+            id: project.id ?? UUID(),
+            name: project.name ?? "",
+            description: project.projectDescription,
+            colorHex: project.colorHex ?? "#4A6EB3",
+            creationDate: project.creationDate ?? Date(),
+            dueDate: project.dueDate,
+            completionDate: project.completionDate,
+            taskIds: project.tasks?.compactMap { ($0 as? Task)?.id } ?? [],
+            parentProjectId: project.parentProject?.id,
+            subProjectIds: project.subProjects?.compactMap { ($0 as? Project)?.id } ?? []
+        )
+    }
 }
 
 // MARK: - サンプルデータ
-extension Project {
-    static var samples: [Project] {
+extension TMProject {
+    static var samples: [TMProject] {
         [
-            Project(
+            TMProject(
                 name: "アプリ開発",
                 description: "新規iOSアプリのリリース準備",
                 colorHex: "#4A90E2"
             ),
-            Project(
+            TMProject(
                 name: "マーケティングキャンペーン",
                 description: "第2四半期の販促キャンペーン計画と実行",
                 colorHex: "#50C356",
                 dueDate: Calendar.current.date(byAdding: .month, value: 1, to: Date())
             ),
-            Project(
+            TMProject(
                 name: "ウェブサイトリニューアル",
                 description: "企業ウェブサイトのデザイン刷新とコンテンツ更新",
                 colorHex: "#E2A64A"
             ),
-            Project(
+            TMProject(
                 name: "人材採用",
                 description: "開発チーム拡大のための採用活動",
                 colorHex: "#E24A6E",
                 dueDate: Calendar.current.date(byAdding: .month, value: 2, to: Date())
             ),
-            Project(
+            TMProject(
                 name: "個人タスク",
                 description: "個人的なToDoリスト",
                 colorHex: "#A64AE2"
@@ -105,7 +121,7 @@ extension Project {
     }
 }
 
-// MARK: - 16進数から色への変換
+// MARK: - 16進数から色への変換（移動が必要な場合はColor+Extensionsへ）
 extension Color {
     init?(hex: String) {
         var hexSanitized = hex.trimmingCharacters(in: .whitespacesAndNewlines)

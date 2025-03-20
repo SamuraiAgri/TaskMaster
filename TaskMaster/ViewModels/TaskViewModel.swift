@@ -40,6 +40,13 @@ class TaskViewModel: ObservableObject {
                 self?.filterAndSortTasks()
             }
             .store(in: &cancellables)
+            
+        // データサービスの変更通知を購読
+        dataService.objectWillChange
+            .sink { [weak self] _ in
+                self?.loadTasks()
+            }
+            .store(in: &cancellables)
     }
     
     // MARK: - 公開メソッド
@@ -54,7 +61,7 @@ class TaskViewModel: ObservableObject {
                 description: task.taskDescription,
                 creationDate: task.creationDate ?? Date(),
                 dueDate: task.dueDate,
-                priorityAndCompletion: task.completionDate,
+                completionDate: task.completionDate,
                 priority: Priority(rawValue: Int(task.priority)) ?? .medium,
                 status: TaskStatus(rawValue: task.status ?? "") ?? .notStarted,
                 projectId: task.project?.id,
