@@ -1,7 +1,7 @@
 import SwiftUI
 
 struct TagView: View {
-    var tag: Tag
+    var tag: TMTag
     var isCompact: Bool = false
     var onRemove: (() -> Void)? = nil
     
@@ -41,7 +41,7 @@ struct TagView: View {
 
 // 複数タグの表示コンポーネント
 struct TagsListView: View {
-    var tags: [Tag]
+    var tags: [TMTag]
     var isCompact: Bool = false
     var limit: Int? = nil
     var onRemove: ((UUID) -> Void)? = nil
@@ -85,7 +85,7 @@ struct TagsListView: View {
 
 // タグセレクターコンポーネント
 struct TagSelectorView: View {
-    var tags: [Tag]
+    var tags: [TMTag]
     @Binding var selectedTagIds: [UUID]
     var isCompact: Bool = false
     
@@ -135,19 +135,19 @@ struct TagView_Previews: PreviewProvider {
     static var previews: some View {
         VStack(spacing: 20) {
             // 通常のタグ
-            TagView(tag: Tag.samples[0])
+            TagView(tag: TMTag.samples[0])
             
             // コンパクトなタグ
-            TagView(tag: Tag.samples[1], isCompact: true)
+            TagView(tag: TMTag.samples[1], isCompact: true)
             
             // 削除可能なタグ
-            TagView(tag: Tag.samples[2], onRemove: {})
+            TagView(tag: TMTag.samples[2], onRemove: {})
             
             // タグリスト
-            TagsListView(tags: Tag.samples, limit: 5)
+            TagsListView(tags: TMTag.samples, limit: 5)
             
             // タグセレクター
-            TagSelectorView(tags: Tag.samples, selectedTagIds: .constant([Tag.samples[0].id, Tag.samples[2].id]))
+            TagSelectorView(tags: TMTag.samples, selectedTagIds: .constant([TMTag.samples[0].id, TMTag.samples[2].id]))
         }
         .padding()
         .previewLayout(.sizeThatFits)

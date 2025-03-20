@@ -86,7 +86,7 @@ struct TaskCreationView: View {
                             .padding()
                             .background(DesignSystem.Colors.card)
                             .cornerRadius(DesignSystem.CornerRadius.medium)
-                            .onChange(of: title) { oldValue, newValue in
+                            .onChange(of: title) { newValue in
                                 if newValue.isEmpty {
                                     titleError = "タイトルは必須です"
                                 } else {
@@ -407,16 +407,8 @@ struct TaskCreationView: View {
     
     // タグセレクター
     private var tagSelectorView: some View {
-        let tags = tagViewModel.tags
-        
-        return TagSelectorView(
-            tags: tags.map { tag -> Tag in
-                let coreDataTag = Tag(context: dataService.viewContext)
-                coreDataTag.id = tag.id
-                coreDataTag.name = tag.name
-                coreDataTag.colorHex = tag.colorHex
-                return coreDataTag
-            },
+        TagSelectorView(
+            tags: tagViewModel.tags,
             selectedTagIds: $selectedTagIds
         )
     }
@@ -456,11 +448,6 @@ struct TaskCreationView: View {
         
         // フォームを閉じる
         presentationMode.wrappedValue.dismiss()
-    }
-    
-    // データサービスの取得
-    private var dataService: DataServiceProtocol {
-        return DataService.shared
     }
 }
 
