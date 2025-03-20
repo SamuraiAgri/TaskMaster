@@ -161,13 +161,24 @@ class CalendarViewModel: ObservableObject {
                 let dayKey = Calendar.current.startOfDay(for: dueDate)
                 
                 let event = CalendarEvent(
-                    id: task.id,
-                    title: task.title,
+                    id: task.id ?? UUID(),
+                    title: task.title ?? "",
                     date: dueDate,
-                    isCompleted: task.isCompleted,
-                    priority: task.priority,
+                    isCompleted: task.status == "完了",
+                    priority: Priority(rawValue: Int(task.priority)) ?? .medium,
                     type: .task,
-                    color: getTaskColor(task)
+                    color: getTaskColor(TMTask(
+                        id: task.id ?? UUID(),
+                        title: task.title ?? "",
+                        description: task.taskDescription,
+                        creationDate: task.creationDate ?? Date(),
+                        dueDate: task.dueDate,
+                        completionDate: task.completionDate,
+                        priority: Priority(rawValue: Int(task.priority)) ?? .medium,
+                        status: TaskStatus(rawValue: task.status ?? "") ?? .notStarted,
+                        projectId: task.project?.id,
+                        tagIds: Array(task.tags?.compactMap { ($0 as? Tag)?.id } ?? [])
+                    ))
                 )
                 
                 if tempEvents[dayKey] == nil {
@@ -366,7 +377,7 @@ class CalendarViewModel: ObservableObject {
     private func getTaskColor(_ task: TMTask) -> Color {
         // プロジェクトがある場合はそのプロジェクトの色を使用
         if let projectId = task.projectId, let project = dataService.getProject(by: projectId) {
-            return project.color
+            return Color(hex: project.colorHex ?? "#4A90E2") ?? .blue
         }
         
         // プロジェクトがない場合は優先度に基づく色を使用
@@ -376,10 +387,9 @@ class CalendarViewModel: ObservableObject {
     /// カレンダーの色を取得
     private func getCalendarColor(_ calendar: EKCalendar?) -> Color {
         guard let calendar = calendar else {
-            return TMDesignSystem.Colors.secondary
+            return DesignSystem.Colors.secondary
         }
         
         return Color(cgColor: calendar.cgColor)
     }
-    
 }

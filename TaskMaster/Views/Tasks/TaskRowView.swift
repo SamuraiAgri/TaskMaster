@@ -3,7 +3,7 @@ import SwiftUI
 // 注意: TaskListView.swiftにも同様の実装がありますが、
 // コンポーネントとして独立させる場合の実装例です
 
-struct TaskRowView: View {
+struct TaskDetailRowView: View {  // TaskRowViewからTaskDetailRowViewに変更
     @State var task: Task
     @EnvironmentObject var taskViewModel: TaskViewModel
     @EnvironmentObject var projectViewModel: ProjectViewModel
@@ -12,7 +12,7 @@ struct TaskRowView: View {
     
     init(task: Task) {
         self._task = State(initialValue: task)
-        self._isCompleted = State(initialValue: task.isCompleted)
+        self._isCompleted = State(initialValue: task.status == "完了")
     }
     
     var body: some View {
@@ -20,7 +20,20 @@ struct TaskRowView: View {
             // 完了チェックボックス
             Button(action: {
                 isCompleted.toggle()
-                taskViewModel.toggleTaskCompletion(task)
+                // TaskをTMTask形式に変換してからトグル
+                let tmTask = TMTask(
+                    id: task.id ?? UUID(),
+                    title: task.title ?? "",
+                    description: task.taskDescription,
+                    creationDate: task.creationDate ?? Date(),
+                    dueDate: task.dueDate,
+                    completionDate: task.completionDate,
+                    priority: Priority(rawValue: Int(task.priority)) ?? .medium,
+                    status: TaskStatus(rawValue: task.status ?? "") ?? .notStarted,
+                    projectId: task.project?.id,
+                    tagIds: Array(task.tags?.compactMap { ($0 as? Tag)?.id } ?? [])
+                )
+                taskViewModel.toggleTaskCompletion(tmTask)
             }) {
                 Image(systemName: isCompleted ? "checkmark.circle.fill" : "circle")
                     .font(.system(size: 22))
@@ -31,7 +44,7 @@ struct TaskRowView: View {
             // タスク情報
             VStack(alignment: .leading, spacing: DesignSystem.Spacing.xxs) {
                 // タスクタイトル
-                Text(task.title)
+                Text(task.title ?? "")
                     .font(DesignSystem.Typography.font(size: DesignSystem.Typography.callout, weight: isCompleted ? .regular : .medium))
                     .foregroundColor(isCompleted ? DesignSystem.Colors.textSecondary : DesignSystem.Colors.textPrimary)
                     .strikethrough(isCompleted)
@@ -39,15 +52,15 @@ struct TaskRowView: View {
                 
                 HStack(spacing: DesignSystem.Spacing.s) {
                     // 優先度
-                    PriorityIndicatorView(priority: task.priority)
+                    DetailPriorityIndicator(priority: Priority(rawValue: Int(task.priority)) ?? .medium)
                     
                     // プロジェクト
-                    if let projectId = task.projectId, let project = projectViewModel.getProject(by: projectId) {
+                    if let project = task.project {
                         ProjectIndicatorView(project: project)
                     }
                     
                     // タグ（一つだけ表示）
-                    if !task.tagIds.isEmpty, let tagId = task.tagIds.first, let tag = tagViewModel.getTag(by: tagId) {
+                    if let tag = task.tags?.firstObject as? Tag {
                         TagIndicatorView(tag: tag)
                     }
                 }
@@ -57,7 +70,8 @@ struct TaskRowView: View {
             
             // 期限日
             if let dueDate = task.dueDate {
-                DueDateView(dueDate: dueDate, isOverdue: task.isOverdue, isCompleted: task.isCompleted)
+                let isOverdue = dueDate < Date() && task.status != "完了"
+                DueDateView(dueDate: dueDate, isOverdue: isOverdue, isCompleted: task.status == "完了")
             }
             
             // 繰り返しタスクマーク
@@ -76,7 +90,7 @@ struct TaskRowView: View {
 }
 
 // 優先度インジケーター
-struct PriorityIndicatorView: View {
+struct DetailPriorityIndicator: View {  // PriorityIndicatorViewからDetailPriorityIndicatorに変更
     var priority: Priority
     
     var body: some View {
@@ -100,15 +114,15 @@ struct ProjectIndicatorView: View {
     var body: some View {
         HStack(spacing: DesignSystem.Spacing.xxs) {
             Circle()
-                .fill(project.color)
+                .fill(Color(hex: project.colorHex ?? "#4A90E2") ?? .blue)
                 .frame(width: 8, height: 8)
             
-            Text(project.name)
+            Text(project.name ?? "")
                 .font(DesignSystem.Typography.font(size: DesignSystem.Typography.caption1))
                 .foregroundColor(DesignSystem.Colors.textSecondary)
                 .lineLimit(1)
         }
-        .accessibilityLabel("プロジェクト: \(project.name)")
+        .accessibilityLabel("プロジェクト: \(project.name ?? "")")
     }
 }
 
@@ -119,15 +133,15 @@ struct TagIndicatorView: View {
     var body: some View {
         HStack(spacing: DesignSystem.Spacing.xxs) {
             Circle()
-                .fill(tag.color)
+                .fill(Color(hex: tag.colorHex ?? "#AAAAAA") ?? .gray)
                 .frame(width: 8, height: 8)
             
-            Text(tag.name)
+            Text(tag.name ?? "")
                 .font(DesignSystem.Typography.font(size: DesignSystem.Typography.caption1))
                 .foregroundColor(DesignSystem.Colors.textSecondary)
                 .lineLimit(1)
         }
-        .accessibilityLabel("タグ: \(tag.name)")
+        .accessibilityLabel("タグ: \(tag.name ?? "")")
     }
 }
 
@@ -176,13 +190,13 @@ struct SwipeableTaskRowView: View {
                 // 完了ボタン
                 Button(action: onComplete) {
                     VStack {
-                        Image(systemName: task.isCompleted ? "arrow.uturn.backward" : "checkmark")
-                        Text(task.isCompleted ? "元に戻す" : "完了")
+                        Image(systemName: task.status == "完了" ? "arrow.uturn.backward" : "checkmark")
+                        Text(task.status == "完了" ? "元に戻す" : "完了")
                             .font(DesignSystem.Typography.font(size: DesignSystem.Typography.caption2))
                     }
                     .foregroundColor(.white)
-                    .frame(width: swipeThreshold, height: double.infinity)
-                    .background(task.isCompleted ? DesignSystem.Colors.warning : DesignSystem.Colors.success)
+                    .frame(width: swipeThreshold, height: .infinity)
+                    .background(task.status == "完了" ? DesignSystem.Colors.warning : DesignSystem.Colors.success)
                 }
                 
                 // 編集ボタン
@@ -256,23 +270,35 @@ struct CompactTaskRowView: View {
         HStack(spacing: DesignSystem.Spacing.s) {
             // 優先度マーク
             Circle()
-                .fill(Color.priorityColor(task.priority))
+                .fill(Color.priorityColor(Priority(rawValue: Int(task.priority)) ?? .medium))
                 .frame(width: 8, height: 8)
             
             // タイトル
-            Text(task.title)
+            Text(task.title ?? "")
                 .font(DesignSystem.Typography.font(size: DesignSystem.Typography.footnote))
-                .foregroundColor(task.isCompleted ? DesignSystem.Colors.textSecondary : DesignSystem.Colors.textPrimary)
-                .strikethrough(task.isCompleted)
+                .foregroundColor(task.status == "完了" ? DesignSystem.Colors.textSecondary : DesignSystem.Colors.textPrimary)
+                .strikethrough(task.status == "完了")
                 .lineLimit(1)
             
             Spacer()
             
             // 期限日（あれば）
             if let dueDate = task.dueDate {
+                // TMTaskの変換を用意
+                let tmTask = TMTask(
+                    id: task.id ?? UUID(),
+                    title: task.title ?? "",
+                    description: task.taskDescription,
+                    creationDate: task.creationDate ?? Date(),
+                    dueDate: task.dueDate,
+                    completionDate: task.completionDate,
+                    priority: Priority(rawValue: Int(task.priority)) ?? .medium,
+                    status: TaskStatus(rawValue: task.status ?? "") ?? .notStarted
+                )
+                
                 Text(dueDate.formatted(with: "MM/dd"))
                     .font(DesignSystem.Typography.font(size: DesignSystem.Typography.caption2))
-                    .foregroundColor(taskViewModel.dueDateColor(for: task))
+                    .foregroundColor(taskViewModel.dueDateColor(for: tmTask))
             }
         }
         .padding(DesignSystem.Spacing.xs)
@@ -285,22 +311,14 @@ struct CompactTaskRowView: View {
 struct TaskRowView_Previews: PreviewProvider {
     static var previews: some View {
         VStack(spacing: 20) {
-            // 通常のタスク行
-            TaskRowView(task: Task.samples[0])
-            
-            // 完了済みタスク行
-            TaskRowView(task: Task.samples[3])
-            
             // コンパクトタスク行
-            CompactTaskRowView(task: Task.samples[0])
+            let task = Task()
+            task.title = "サンプルタスク"
+            task.priority = 2
+            CompactTaskRowView(task: task)
             
-            // スワイプアクション付きタスク行
-            SwipeableTaskRowView(
-                task: Task.samples[0],
-                onDelete: {},
-                onEdit: {},
-                onComplete: {}
-            )
+            // 詳細タスク行
+            DetailPriorityIndicator(priority: .medium)
         }
         .padding()
         .environmentObject(TaskViewModel())

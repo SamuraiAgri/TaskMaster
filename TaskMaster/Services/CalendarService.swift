@@ -28,6 +28,7 @@ class CalendarService {
         if #available(iOS 17.0, *) {
             self.authorizationStatus = eventStore.authorizationStatus(for: .event)
         } else {
+            // iOS 17より前はクラスメソッドを使用
             self.authorizationStatus = EKEventStore.authorizationStatus(for: .event)
         }
     }

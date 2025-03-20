@@ -198,19 +198,19 @@ class TaskViewModel: ObservableObject {
     // タスク期限による色取得
     func dueDateColor(for task: TMTask) -> Color {
         guard let daysUntilDue = task.daysUntilDue else {
-            return TMDesignSystem.Colors.textSecondary
+            return DesignSystem.Colors.textSecondary
         }
         
         if task.isCompleted {
-            return TMDesignSystem.Colors.success
+            return DesignSystem.Colors.success
         } else if daysUntilDue < 0 {
-            return TMDesignSystem.Colors.error
+            return DesignSystem.Colors.error
         } else if daysUntilDue == 0 {
-            return TMDesignSystem.Colors.warning
+            return DesignSystem.Colors.warning
         } else if daysUntilDue <= 2 {
-            return TMDesignSystem.Colors.info
+            return DesignSystem.Colors.info
         } else {
-            return TMDesignSystem.Colors.textSecondary
+            return DesignSystem.Colors.textSecondary
         }
     }
     

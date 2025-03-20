@@ -132,198 +132,181 @@ struct ProjectListView: View {
         .padding(.horizontal)
         .background(DesignSystem.Colors.background)
     }
-    
     // プロジェクトリスト（プロジェクトがある場合）
-    private var projectListContent: some View {
-        ScrollView {
-            LazyVStack(spacing: DesignSystem.Spacing.m) {
-                ForEach(projectViewModel.filteredProjects) { project in
-                    NavigationLink(destination: ProjectDetailView(project: project)) {
-                        ProjectCardItem(project: project)
+        private var projectListContent: some View {
+            ScrollView {
+                LazyVStack(spacing: DesignSystem.Spacing.m) {
+                    ForEach(projectViewModel.filteredProjects) { project in
+                        NavigationLink(destination: ProjectDetailView(project: project)) {
+                            ProjectCardItem(project: project)
+                        }
+                        .buttonStyle(PlainButtonStyle())
                     }
-                    .buttonStyle(PlainButtonStyle())
+                }
+                .padding()
+            }
+            .refreshable {
+                projectViewModel.loadProjects()
+                refreshTrigger.toggle()
+            }
+        }
+        
+        // 空の状態表示（プロジェクトがない場合）
+        private var emptyStateView: some View {
+            VStack(spacing: DesignSystem.Spacing.l) {
+                Spacer()
+                
+                Image(systemName: "folder")
+                    .font(.system(size: 64))
+                    .foregroundColor(DesignSystem.Colors.textSecondary.opacity(0.5))
+                
+                if projectViewModel.searchText.isEmpty {
+                    Text("プロジェクトがありません")
+                        .font(DesignSystem.Typography.font(size: DesignSystem.Typography.headline))
+                        .foregroundColor(DesignSystem.Colors.textSecondary)
+                        .multilineTextAlignment(.center)
+                    
+                    Button(action: {
+                        showingNewProjectSheet = true
+                    }) {
+                        Text("新しいプロジェクトを作成")
+                            .font(DesignSystem.Typography.font(size: DesignSystem.Typography.body, weight: .medium))
+                            .foregroundColor(.white)
+                            .padding()
+                            .frame(maxWidth: 280)
+                            .background(DesignSystem.Colors.primary)
+                            .cornerRadius(DesignSystem.CornerRadius.medium)
+                    }
+                } else {
+                    Text("「\(projectViewModel.searchText)」に一致するプロジェクトはありません")
+                        .font(DesignSystem.Typography.font(size: DesignSystem.Typography.headline))
+                        .foregroundColor(DesignSystem.Colors.textSecondary)
+                        .multilineTextAlignment(.center)
+                        .padding(.horizontal)
+                }
+                
+                Spacer()
+            }
+            .padding()
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+            .background(DesignSystem.Colors.background)
+        }
+    }
+
+    // プロジェクトカードアイテム
+    struct ProjectCardItem: View {
+        var project: Project
+        @EnvironmentObject var taskViewModel: TaskViewModel
+        @EnvironmentObject var projectViewModel: ProjectViewModel
+        
+        var body: some View {
+            VStack(alignment: .leading, spacing: DesignSystem.Spacing.s) {
+                // プロジェクト名とステータス
+                HStack {
+                    Text(project.name ?? "")
+                        .font(DesignSystem.Typography.font(size: DesignSystem.Typography.headline, weight: .semibold))
+                        .foregroundColor(DesignSystem.Colors.textPrimary)
+                    
+                    Spacer()
+                    
+                    if project.completionDate != nil {
+                        Text("完了")
+                            .font(DesignSystem.Typography.font(size: DesignSystem.Typography.caption1))
+                            .foregroundColor(.white)
+                            .padding(.horizontal, DesignSystem.Spacing.s)
+                            .padding(.vertical, DesignSystem.Spacing.xxs)
+                            .background(DesignSystem.Colors.success)
+                            .cornerRadius(DesignSystem.CornerRadius.small)
+                    }
+                }
+                
+                // 説明（あれば）
+                if let description = project.projectDescription, !description.isEmpty {
+                    Text(description)
+                        .font(DesignSystem.Typography.font(size: DesignSystem.Typography.subheadline))
+                        .foregroundColor(DesignSystem.Colors.textSecondary)
+                        .lineLimit(2)
+                        .padding(.bottom, DesignSystem.Spacing.xxs)
+                }
+                
+                // タスク数と期限
+                HStack {
+                    let taskCount = project.tasks?.count ?? 0
+                    Label {
+                        Text("\(taskCount) タスク")
+                            .font(DesignSystem.Typography.font(size: DesignSystem.Typography.footnote))
+                            .foregroundColor(DesignSystem.Colors.textSecondary)
+                    } icon: {
+                        Image(systemName: "checklist")
+                            .foregroundColor(DesignSystem.Colors.textSecondary)
+                            .font(.system(size: 12))
+                    }
+                    
+                    Spacer()
+                    
+                    if let dueDate = project.dueDate {
+                        let isOverdue = dueDate < Date() && project.completionDate == nil
+                        Label {
+                            Text(dueDate.formatted(with: "yyyy/MM/dd"))
+                                .font(DesignSystem.Typography.font(size: DesignSystem.Typography.footnote))
+                                .foregroundColor(isOverdue ? DesignSystem.Colors.error : DesignSystem.Colors.textSecondary)
+                        } icon: {
+                            Image(systemName: "calendar")
+                                .foregroundColor(isOverdue ? DesignSystem.Colors.error : DesignSystem.Colors.textSecondary)
+                                .font(.system(size: 12))
+                        }
+                    }
+                }
+                
+                // 進捗バー
+                let progress = projectViewModel.calculateProgress(for: project, tasks: taskViewModel.tasks)
+                HStack(spacing: DesignSystem.Spacing.s) {
+                    ProgressBarView(value: progress, color: Color(hex: project.colorHex ?? "#4A90E2") ?? .blue, height: 8)
+                    
+                    Text("\(Int(progress * 100))%")
+                        .font(DesignSystem.Typography.font(size: DesignSystem.Typography.caption1))
+                        .foregroundColor(DesignSystem.Colors.textSecondary)
+                        .frame(width: 40, alignment: .trailing)
                 }
             }
             .padding()
+            .background(DesignSystem.Colors.card)
+            .cornerRadius(DesignSystem.CornerRadius.medium)
+            .shadow(color: Color.black.opacity(0.1), radius: 4, x: 0, y: 2)
+            .overlay(
+                Rectangle()
+                    .fill(Color(hex: project.colorHex ?? "#4A90E2") ?? .blue)
+                    .frame(width: 4)
+                    .cornerRadius(DesignSystem.CornerRadius.small, corners: [.topLeft, .bottomLeft]),
+                alignment: .leading
+            )
         }
-        .refreshable {
-            projectViewModel.loadProjects()
-            refreshTrigger.toggle()
+    }
+
+    // 角丸の拡張
+    struct TMRoundedCorner: Shape {
+        var radius: CGFloat = .infinity
+        var corners: UIRectCorner = .allCorners
+        
+        func path(in rect: CGRect) -> Path {
+            let path = UIBezierPath(roundedRect: rect, byRoundingCorners: corners, cornerRadii: CGSize(width: radius, height: radius))
+            return Path(path.cgPath)
         }
     }
-    
-    // 空の状態表示（プロジェクトがない場合）
-    private var emptyStateView: some View {
-        VStack(spacing: DesignSystem.Spacing.l) {
-            Spacer()
-            
-            Image(systemName: "folder")
-                .font(.system(size: 64))
-                .foregroundColor(DesignSystem.Colors.textSecondary.opacity(0.5))
-            
-            if projectViewModel.searchText.isEmpty {
-                Text("プロジェクトがありません")
-                    .font(DesignSystem.Typography.font(size: DesignSystem.Typography.headline))
-                    .foregroundColor(DesignSystem.Colors.textSecondary)
-                    .multilineTextAlignment(.center)
-                
-                Button(action: {
-                    showingNewProjectSheet = true
-                }) {
-                    Text("新しいプロジェクトを作成")
-                        .font(DesignSystem.Typography.font(size: DesignSystem.Typography.body, weight: .medium))
-                        .foregroundColor(.white)
-                        .padding()
-                        .frame(maxWidth: 280)
-                        .background(DesignSystem.Colors.primary)
-                        .cornerRadius(DesignSystem.CornerRadius.medium)
-                }
-            } else {
-                Text("「\(projectViewModel.searchText)」に一致するプロジェクトはありません")
-                    .font(DesignSystem.Typography.font(size: DesignSystem.Typography.headline))
-                    .foregroundColor(DesignSystem.Colors.textSecondary)
-                    .multilineTextAlignment(.center)
-                    .padding(.horizontal)
-            }
-            
-            Spacer()
+
+    // シャドウスタイル
+    struct TMShadowStyle {
+        let color: Color
+        let radius: CGFloat
+        let x: CGFloat
+        let y: CGFloat
+    }
+
+    // プレビュー
+    struct ProjectListView_Previews: PreviewProvider {
+        static var previews: some View {
+            ProjectListView()
+                .environmentObject(ProjectViewModel())
+                .environmentObject(TaskViewModel())
         }
-        .padding()
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .background(DesignSystem.Colors.background)
     }
-}
-
-// プロジェクトカードアイテム
-struct ProjectCardItem: View {
-    var project: Project
-    @EnvironmentObject var taskViewModel: TaskViewModel
-    @EnvironmentObject var projectViewModel: ProjectViewModel
-    
-    var body: some View {
-        VStack(alignment: .leading, spacing: DesignSystem.Spacing.s) {
-            // プロジェクト名とステータス
-            HStack {
-                Text(project.name ?? "")
-                    .font(DesignSystem.Typography.font(size: DesignSystem.Typography.headline, weight: .semibold))
-                    .foregroundColor(DesignSystem.Colors.textPrimary)
-                
-                Spacer()
-                
-                if project.completionDate != nil {
-                    Text("完了")
-                        .font(DesignSystem.Typography.font(size: DesignSystem.Typography.caption1))
-                        .foregroundColor(.white)
-                        .padding(.horizontal, DesignSystem.Spacing.s)
-                        .padding(.vertical, DesignSystem.Spacing.xxs)
-                        .background(DesignSystem.Colors.success)
-                        .cornerRadius(DesignSystem.CornerRadius.small)
-                }
-            }
-            
-            // 説明（あれば）
-            if let description = project.projectDescription, !description.isEmpty {
-                Text(description)
-                    .font(DesignSystem.Typography.font(size: DesignSystem.Typography.subheadline))
-                    .foregroundColor(DesignSystem.Colors.textSecondary)
-                    .lineLimit(2)
-                    .padding(.bottom, DesignSystem.Spacing.xxs)
-            }
-            
-            // タスク数と期限
-            HStack {
-                let taskCount = project.tasks?.count ?? 0
-                Label {
-                    Text("\(taskCount) タスク")
-                        .font(DesignSystem.Typography.font(size: DesignSystem.Typography.footnote))
-                        .foregroundColor(DesignSystem.Colors.textSecondary)
-                } icon: {
-                    Image(systemName: "checklist")
-                        .foregroundColor(DesignSystem.Colors.textSecondary)
-                        .font(.system(size: 12))
-                }
-                
-                Spacer()
-                
-                if let dueDate = project.dueDate {
-                    let isOverdue = dueDate < Date() && project.completionDate == nil
-                    Label {
-                        Text(dueDate.formatted(with: "yyyy/MM/dd"))
-                            .font(DesignSystem.Typography.font(size: DesignSystem.Typography.footnote))
-                            .foregroundColor(isOverdue ? DesignSystem.Colors.error : DesignSystem.Colors.textSecondary)
-                    } icon: {
-                        Image(systemName: "calendar")
-                            .foregroundColor(isOverdue ? DesignSystem.Colors.error : DesignSystem.Colors.textSecondary)
-                            .font(.system(size: 12))
-                    }
-                }
-            }
-            
-            // 進捗バー
-            let progress = projectViewModel.calculateProgress(for: project, tasks: taskViewModel.tasks)
-            HStack(spacing: DesignSystem.Spacing.s) {
-                ProgressBarView(value: progress, color: Color(hex: project.colorHex ?? "#4A90E2") ?? .blue, height: 8)
-                
-                Text("\(Int(progress * 100))%")
-                    .font(DesignSystem.Typography.font(size: DesignSystem.Typography.caption1))
-                    .foregroundColor(DesignSystem.Colors.textSecondary)
-                    .frame(width: 40, alignment: .trailing)
-            }
-        }
-        .padding()
-        .background(DesignSystem.Colors.card)
-        .cornerRadius(DesignSystem.CornerRadius.medium)
-        .shadow(color: Color.black.opacity(0.1), radius: 4, x: 0, y: 2)
-        .overlay(
-            Rectangle()
-                .fill(Color(hex: project.colorHex ?? "#4A90E2") ?? .blue)
-                .frame(width: 4)
-                .cornerRadius(DesignSystem.CornerRadius.small, corners: [.topLeft, .bottomLeft]),
-            alignment: .leading
-        )
-    }
-}
-
-// 角丸の拡張
-struct TMRoundedCorner: Shape {
-    var radius: CGFloat = .infinity
-    var corners: UIRectCorner = .allCorners
-    
-    func path(in rect: CGRect) -> Path {
-        let path = UIBezierPath(roundedRect: rect, byRoundingCorners: corners, cornerRadii: CGSize(width: radius, height: radius))
-        return Path(path.cgPath)
-    }
-}
-
-// ビューの拡張
-extension View {
-    func cornerRadius(_ radius: CGFloat, corners: UIRectCorner) -> some View {
-        clipShape(TMRoundedCorner(radius: radius, corners: corners))
-    }
-    
-    func withShadow(_ style: TMShadowStyle) -> some View {
-        self.shadow(
-            color: style.color,
-            radius: style.radius,
-            x: style.x,
-            y: style.y
-        )
-    }
-}
-
-// シャドウスタイル
-struct TMShadowStyle {
-    let color: Color
-    let radius: CGFloat
-    let x: CGFloat
-    let y: CGFloat
-}
-
-// プレビュー
-struct ProjectListView_Previews: PreviewProvider {
-    static var previews: some View {
-        ProjectListView()
-            .environmentObject(ProjectViewModel())
-            .environmentObject(TaskViewModel())
-    }
-}

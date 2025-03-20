@@ -1,7 +1,7 @@
 import SwiftUI
 
 // MARK: - 円グラフ表示コンポーネント
-struct PieChartView: View {
+struct ChartPieView: View {  // PieChartViewからChartPieViewに変更
     var value: Double
     var total: Double
     var color: Color
@@ -37,7 +37,7 @@ struct PieChartView: View {
 }
 
 // MARK: - 棒グラフアイテム
-struct BarChartItem: View {
+struct ChartBarItem: View {  // BarChartItemからChartBarItemに変更
     var value: Int
     var total: Int
     var title: String
@@ -272,14 +272,14 @@ struct ChartViews_Previews: PreviewProvider {
     static var previews: some View {
         VStack(spacing: 30) {
             // 円グラフ
-            PieChartView(value: 75, total: 100, color: DesignSystem.Colors.primary)
+            ChartPieView(value: 75, total: 100, color: DesignSystem.Colors.primary)
                 .frame(height: 200)
             
             // 棒グラフアイテム
             HStack {
-                BarChartItem(value: 15, total: 30, title: "高", color: DesignSystem.Colors.error)
-                BarChartItem(value: 20, total: 30, title: "中", color: DesignSystem.Colors.warning)
-                BarChartItem(value: 10, total: 30, title: "低", color: DesignSystem.Colors.info)
+                ChartBarItem(value: 15, total: 30, title: "高", color: DesignSystem.Colors.error)
+                ChartBarItem(value: 20, total: 30, title: "中", color: DesignSystem.Colors.warning)
+                ChartBarItem(value: 10, total: 30, title: "低", color: DesignSystem.Colors.info)
             }
             .frame(height: 120)
             

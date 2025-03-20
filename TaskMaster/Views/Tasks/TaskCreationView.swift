@@ -136,361 +136,297 @@ struct TaskCreationView: View {
                     
                     // ステータス選択
                     VStack(alignment: .leading, spacing: DesignSystem.Spacing.xxs) {
-                        Text("ステータス")
-                            .font(DesignSystem.Typography.font(size: DesignSystem.Typography.subheadline))
-                            .foregroundColor(DesignSystem.Colors.textSecondary)
-                        
-                        statusPicker
-                    }
-                }
-            }
-        }
-    }
-    
-    // 詳細情報セクション
-    private var detailsSection: some View {
-        VStack(alignment: .leading, spacing: DesignSystem.Spacing.m) {
-            sectionHeader(title: "詳細情報", section: .details)
-            
-            if activeSection == .details {
-                VStack(alignment: .leading, spacing: DesignSystem.Spacing.m) {
-                    // 繰り返し設定
-                    VStack(alignment: .leading, spacing: DesignSystem.Spacing.xs) {
-                        Toggle("繰り返しタスク", isOn: $isRepeating)
-                            .font(DesignSystem.Typography.font(size: DesignSystem.Typography.body))
-                            .toggleStyle(SwitchToggleStyle(tint: DesignSystem.Colors.primary))
-                        
-                        if isRepeating {
-                            repeatTypePicker
-                        }
-                    }
-                    .padding()
-                    .background(DesignSystem.Colors.card)
-                    .cornerRadius(DesignSystem.CornerRadius.medium)
-                }
-            }
-        }
-    }
-    
-    // スケジュールセクション
-    private var scheduleSection: some View {
-        VStack(alignment: .leading, spacing: DesignSystem.Spacing.m) {
-            sectionHeader(title: "スケジュール", section: .schedule)
-            
-            if activeSection == .schedule {
-                VStack(alignment: .leading, spacing: DesignSystem.Spacing.m) {
-                    // 期限日設定
-                    VStack(alignment: .leading, spacing: DesignSystem.Spacing.xs) {
-                        Toggle("期限日", isOn: $hasDueDate)
-                            .font(DesignSystem.Typography.font(size: DesignSystem.Typography.body))
-                            .toggleStyle(SwitchToggleStyle(tint: DesignSystem.Colors.primary))
-                        
-                        if hasDueDate {
-                            HStack {
-                                Text(dueDate.formatted())
-                                    .font(DesignSystem.Typography.font(size: DesignSystem.Typography.body))
-                                    .foregroundColor(DesignSystem.Colors.textPrimary)
-                                
-                                Spacer()
-                                
-                                Button(action: {
-                                    showingDueDatePicker.toggle()
-                                }) {
-                                    Image(systemName: "calendar")
-                                        .foregroundColor(DesignSystem.Colors.primary)
+                        .font(DesignSystem.Typography.font(size: DesignSystem.Typography.body))
+                                                    .toggleStyle(SwitchToggleStyle(tint: DesignSystem.Colors.primary))
+                                                
+                                                if hasReminder {
+                                                    HStack {
+                                                        Text(reminderDate.formatted(style: .medium, showTime: true))
+                                                            .font(DesignSystem.Typography.font(size: DesignSystem.Typography.body))
+                                                            .foregroundColor(DesignSystem.Colors.textPrimary)
+                                                        
+                                                        Spacer()
+                                                        
+                                                        Button(action: {
+                                                            showingReminderPicker.toggle()
+                                                        }) {
+                                                            Image(systemName: "bell")
+                                                                .foregroundColor(DesignSystem.Colors.primary)
+                                                        }
+                                                    }
+                                                    
+                                                    if showingReminderPicker {
+                                                        DatePicker("", selection: $reminderDate, displayedComponents: [.date, .hourAndMinute])
+                                                            .datePickerStyle(GraphicalDatePickerStyle())
+                                                            .labelsHidden()
+                                                    }
+                                                }
+                                            }
+                                            .padding()
+                                            .background(DesignSystem.Colors.card)
+                                            .cornerRadius(DesignSystem.CornerRadius.medium)
+                                        }
+                                    }
                                 }
                             }
                             
-                            if showingDueDatePicker {
-                                DatePicker("", selection: $dueDate, displayedComponents: [.date, .hourAndMinute])
-                                    .datePickerStyle(GraphicalDatePickerStyle())
-                                    .labelsHidden()
-                            }
-                        }
-                    }
-                    .padding()
-                    .background(DesignSystem.Colors.card)
-                    .cornerRadius(DesignSystem.CornerRadius.medium)
-                    
-                    // リマインダー設定
-                    VStack(alignment: .leading, spacing: DesignSystem.Spacing.xs) {
-                        Toggle("リマインダー", isOn: $hasReminder)
-                            .font(DesignSystem.Typography.font(size: DesignSystem.Typography.body))
-                            .toggleStyle(SwitchToggleStyle(tint: DesignSystem.Colors.primary))
-                        
-                        if hasReminder {
-                            HStack {
-                                Text(reminderDate.formatted(style: .medium, showTime: true))
-                                    .font(DesignSystem.Typography.font(size: DesignSystem.Typography.body))
-                                    .foregroundColor(DesignSystem.Colors.textPrimary)
-                                
-                                Spacer()
-                                
-                                Button(action: {
-                                    showingReminderPicker.toggle()
-                                }) {
-                                    Image(systemName: "bell")
-                                        .foregroundColor(DesignSystem.Colors.primary)
+                            // 分類セクション
+                            private var categorySection: some View {
+                                VStack(alignment: .leading, spacing: DesignSystem.Spacing.m) {
+                                    sectionHeader(title: "分類", section: .category)
+                                    
+                                    if activeSection == .category {
+                                        VStack(alignment: .leading, spacing: DesignSystem.Spacing.m) {
+                                            // プロジェクト選択
+                                            VStack(alignment: .leading, spacing: DesignSystem.Spacing.xs) {
+                                                Text("プロジェクト")
+                                                    .font(DesignSystem.Typography.font(size: DesignSystem.Typography.subheadline))
+                                                    .foregroundColor(DesignSystem.Colors.textSecondary)
+                                                
+                                                projectPicker
+                                            }
+                                            .padding()
+                                            .background(DesignSystem.Colors.card)
+                                            .cornerRadius(DesignSystem.CornerRadius.medium)
+                                            
+                                            // タグ選択
+                                            VStack(alignment: .leading, spacing: DesignSystem.Spacing.xs) {
+                                                Text("タグ")
+                                                    .font(DesignSystem.Typography.font(size: DesignSystem.Typography.subheadline))
+                                                    .foregroundColor(DesignSystem.Colors.textSecondary)
+                                                
+                                                tagSelectorView
+                                            }
+                                            .padding()
+                                            .background(DesignSystem.Colors.card)
+                                            .cornerRadius(DesignSystem.CornerRadius.medium)
+                                        }
+                                    }
                                 }
                             }
                             
-                            if showingReminderPicker {
-                                DatePicker("", selection: $reminderDate, displayedComponents: [.date, .hourAndMinute])
-                                    .datePickerStyle(GraphicalDatePickerStyle())
-                                    .labelsHidden()
+                            // セクションヘッダー
+                            private func sectionHeader(title: String, section: FormSection) -> some View {
+                                Button(action: {
+                                    if activeSection == section {
+                                        activeSection = nil
+                                    } else {
+                                        activeSection = section
+                                    }
+                                }) {
+                                    HStack {
+                                        Text(title)
+                                            .font(DesignSystem.Typography.font(size: DesignSystem.Typography.headline, weight: .semibold))
+                                            .foregroundColor(DesignSystem.Colors.textPrimary)
+                                        
+                                        Spacer()
+                                        
+                                        Image(systemName: activeSection == section ? "chevron.up" : "chevron.down")
+                                            .font(.system(size: 16, weight: .medium))
+                                            .foregroundColor(DesignSystem.Colors.textSecondary)
+                                    }
+                                }
+                            }
+                            
+                            // ステータスピッカー
+                            private var statusPicker: some View {
+                                ScrollView(.horizontal, showsIndicators: false) {
+                                    HStack(spacing: DesignSystem.Spacing.m) {
+                                        ForEach(TaskStatus.allCases) { status in
+                                            Button(action: {
+                                                self.status = status
+                                            }) {
+                                                Text(status.rawValue)
+                                                    .font(DesignSystem.Typography.font(size: DesignSystem.Typography.footnote))
+                                                    .padding(.horizontal, DesignSystem.Spacing.s)
+                                                    .padding(.vertical, DesignSystem.Spacing.xs)
+                                                    .foregroundColor(self.status == status ? .white : Color.statusColor(status))
+                                                    .background(self.status == status ? Color.statusColor(status) : Color.statusColor(status).opacity(0.2))
+                                                    .cornerRadius(DesignSystem.CornerRadius.small)
+                                            }
+                                        }
+                                    }
+                                    .padding(.vertical, DesignSystem.Spacing.xxs)
+                                }
+                            }
+                            
+                            // 繰り返しタイプピッカー
+                            private var repeatTypePicker: some View {
+                                ScrollView(.horizontal, showsIndicators: false) {
+                                    HStack(spacing: DesignSystem.Spacing.m) {
+                                        ForEach(RepeatType.allCases) { type in
+                                            Button(action: {
+                                                self.repeatType = type
+                                            }) {
+                                                Text(type.rawValue)
+                                                    .font(DesignSystem.Typography.font(size: DesignSystem.Typography.footnote))
+                                                    .padding(.horizontal, DesignSystem.Spacing.s)
+                                                    .padding(.vertical, DesignSystem.Spacing.xs)
+                                                    .foregroundColor(self.repeatType == type ? .white : DesignSystem.Colors.primary)
+                                                    .background(self.repeatType == type ? DesignSystem.Colors.primary : DesignSystem.Colors.primary.opacity(0.2))
+                                                    .cornerRadius(DesignSystem.CornerRadius.small)
+                                            }
+                                        }
+                                    }
+                                    .padding(.vertical, DesignSystem.Spacing.xxs)
+                                }
+                            }
+                            
+                            // プロジェクトピッカー
+                            private var projectPicker: some View {
+                                ScrollView(.horizontal, showsIndicators: false) {
+                                    HStack(spacing: DesignSystem.Spacing.m) {
+                                        // 「なし」オプション
+                                        Button(action: {
+                                            self.selectedProjectId = nil
+                                        }) {
+                                            Text("なし")
+                                                .font(DesignSystem.Typography.font(size: DesignSystem.Typography.footnote))
+                                                .padding(.horizontal, DesignSystem.Spacing.s)
+                                                .padding(.vertical, DesignSystem.Spacing.xs)
+                                                .foregroundColor(selectedProjectId == nil ? .white : DesignSystem.Colors.textSecondary)
+                                                .background(selectedProjectId == nil ? DesignSystem.Colors.textSecondary : DesignSystem.Colors.textSecondary.opacity(0.2))
+                                                .cornerRadius(DesignSystem.CornerRadius.small)
+                                        }
+                                        
+                                        // プロジェクト一覧
+                                        ForEach(projectViewModel.projects) { project in
+                                            Button(action: {
+                                                self.selectedProjectId = project.id
+                                            }) {
+                                                HStack(spacing: DesignSystem.Spacing.xxs) {
+                                                    Circle()
+                                                        .fill(project.color)
+                                                        .frame(width: 8, height: 8)
+                                                    
+                                                    Text(project.name)
+                                                        .font(DesignSystem.Typography.font(size: DesignSystem.Typography.footnote))
+                                                        .lineLimit(1)
+                                                }
+                                                .padding(.horizontal, DesignSystem.Spacing.s)
+                                                .padding(.vertical, DesignSystem.Spacing.xs)
+                                                .foregroundColor(selectedProjectId == project.id ? .white : project.color)
+                                                .background(selectedProjectId == project.id ? project.color : project.color.opacity(0.2))
+                                                .cornerRadius(DesignSystem.CornerRadius.small)
+                                            }
+                                        }
+                                    }
+                                    .padding(.vertical, DesignSystem.Spacing.xxs)
+                                }
+                            }
+                            
+                            // タグセレクター
+                            private var tagSelectorView: some View {
+                                let tags = tagViewModel.tags.map { tag -> Tag in
+                                    let coreDataTag = Tag(context: dataService.viewContext)
+                                    coreDataTag.id = tag.id
+                                    coreDataTag.name = tag.name
+                                    coreDataTag.colorHex = tag.colorHex
+                                    return coreDataTag
+                                }
+                                
+                                return TagSelectorView(
+                                    tags: tags,
+                                    selectedTagIds: $selectedTagIds
+                                )
+                            }
+                            
+                            // タスクの保存
+                            private func saveTask() {
+                                // バリデーション
+                                if title.isEmpty {
+                                    titleError = "タイトルは必須です"
+                                    return
+                                }
+                                
+                                // タスクの作成
+                                var task = TMTask(
+                                    title: title,
+                                    description: description.isEmpty ? nil : description,
+                                    priority: priority,
+                                    status: status,
+                                    projectId: selectedProjectId,
+                                    tagIds: selectedTagIds,
+                                    isRepeating: isRepeating,
+                                    repeatType: isRepeating ? repeatType : .none
+                                )
+                                
+                                // 期限日の設定
+                                if hasDueDate {
+                                    task.dueDate = dueDate
+                                }
+                                
+                                // リマインダーの設定
+                                if hasReminder {
+                                    task.reminderDate = reminderDate
+                                }
+                                
+                                // タスクの保存
+                                taskViewModel.addTask(task)
+                                
+                                // フォームを閉じる
+                                presentationMode.wrappedValue.dismiss()
+                            }
+                            
+                            // データサービスの取得
+                            private var dataService: DataServiceProtocol {
+                                return DataService.shared
                             }
                         }
-                    }
-                    .padding()
-                    .background(DesignSystem.Colors.card)
-                    .cornerRadius(DesignSystem.CornerRadius.medium)
-                }
-            }
-        }
-    }
-    
-    // 分類セクション
-    private var categorySection: some View {
-        VStack(alignment: .leading, spacing: DesignSystem.Spacing.m) {
-            sectionHeader(title: "分類", section: .category)
-            
-            if activeSection == .category {
-                VStack(alignment: .leading, spacing: DesignSystem.Spacing.m) {
-                    // プロジェクト選択
-                    VStack(alignment: .leading, spacing: DesignSystem.Spacing.xs) {
-                        Text("プロジェクト")
-                            .font(DesignSystem.Typography.font(size: DesignSystem.Typography.subheadline))
-                            .foregroundColor(DesignSystem.Colors.textSecondary)
-                        
-                        projectPicker
-                    }
-                    .padding()
-                    .background(DesignSystem.Colors.card)
-                    .cornerRadius(DesignSystem.CornerRadius.medium)
-                    
-                    // タグ選択
-                    VStack(alignment: .leading, spacing: DesignSystem.Spacing.xs) {
-                        Text("タグ")
-                            .font(DesignSystem.Typography.font(size: DesignSystem.Typography.subheadline))
-                            .foregroundColor(DesignSystem.Colors.textSecondary)
-                        
-                        TagSelectorView(
-                            tags: tagViewModel.tags,
-                            selectedTagIds: $selectedTagIds
-                        )
-                    }
-                    .padding()
-                    .background(DesignSystem.Colors.card)
-                    .cornerRadius(DesignSystem.CornerRadius.medium)
-                }
-            }
-        }
-    }
-    
-    // セクションヘッダー
-    private func sectionHeader(title: String, section: FormSection) -> some View {
-        Button(action: {
-            if activeSection == section {
-                activeSection = nil
-            } else {
-                activeSection = section
-            }
-        }) {
-            HStack {
-                Text(title)
-                    .font(DesignSystem.Typography.font(size: DesignSystem.Typography.headline, weight: .semibold))
-                    .foregroundColor(DesignSystem.Colors.textPrimary)
-                
-                Spacer()
-                
-                Image(systemName: activeSection == section ? "chevron.up" : "chevron.down")
-                    .font(.system(size: 16, weight: .medium))
-                    .foregroundColor(DesignSystem.Colors.textSecondary)
-            }
-        }
-    }
-    
-    // ステータスピッカー
-    private var statusPicker: some View {
-        ScrollView(.horizontal, showsIndicators: false) {
-            HStack(spacing: DesignSystem.Spacing.m) {
-                ForEach(TaskStatus.allCases) { status in
-                    Button(action: {
-                        self.status = status
-                    }) {
-                        Text(status.rawValue)
-                            .font(DesignSystem.Typography.font(size: DesignSystem.Typography.footnote))
-                            .padding(.horizontal, DesignSystem.Spacing.s)
-                            .padding(.vertical, DesignSystem.Spacing.xs)
-                            .foregroundColor(self.status == status ? .white : Color.statusColor(status))
-                            .background(self.status == status ? Color.statusColor(status) : Color.statusColor(status).opacity(0.2))
-                            .cornerRadius(DesignSystem.CornerRadius.small)
-                    }
-                }
-            }
-            .padding(.vertical, DesignSystem.Spacing.xxs)
-        }
-    }
-    
-    // 繰り返しタイプピッカー
-    private var repeatTypePicker: some View {
-        ScrollView(.horizontal, showsIndicators: false) {
-            HStack(spacing: DesignSystem.Spacing.m) {
-                ForEach(RepeatType.allCases) { type in
-                    Button(action: {
-                        self.repeatType = type
-                    }) {
-                        Text(type.rawValue)
-                            .font(DesignSystem.Typography.font(size: DesignSystem.Typography.footnote))
-                            .padding(.horizontal, DesignSystem.Spacing.s)
-                            .padding(.vertical, DesignSystem.Spacing.xs)
-                            .foregroundColor(self.repeatType == type ? .white : DesignSystem.Colors.primary)
-                            .background(self.repeatType == type ? DesignSystem.Colors.primary : DesignSystem.Colors.primary.opacity(0.2))
-                            .cornerRadius(DesignSystem.CornerRadius.small)
-                    }
-                }
-            }
-            .padding(.vertical, DesignSystem.Spacing.xxs)
-        }
-    }
-    
-    // プロジェクトピッカー
-    private var projectPicker: some View {
-        ScrollView(.horizontal, showsIndicators: false) {
-            HStack(spacing: DesignSystem.Spacing.m) {
-                // 「なし」オプション
-                Button(action: {
-                    self.selectedProjectId = nil
-                }) {
-                    Text("なし")
-                        .font(DesignSystem.Typography.font(size: DesignSystem.Typography.footnote))
-                        .padding(.horizontal, DesignSystem.Spacing.s)
-                        .padding(.vertical, DesignSystem.Spacing.xs)
-                        .foregroundColor(selectedProjectId == nil ? .white : DesignSystem.Colors.textSecondary)
-                        .background(selectedProjectId == nil ? DesignSystem.Colors.textSecondary : DesignSystem.Colors.textSecondary.opacity(0.2))
-                        .cornerRadius(DesignSystem.CornerRadius.small)
-                }
-                
-                // プロジェクト一覧
-                ForEach(projectViewModel.projects) { project in
-                    Button(action: {
-                        self.selectedProjectId = project.id
-                    }) {
-                        HStack(spacing: DesignSystem.Spacing.xxs) {
-                            Circle()
-                                .fill(project.color)
-                                .frame(width: 8, height: 8)
-                            
-                            Text(project.name)
-                                .font(DesignSystem.Typography.font(size: DesignSystem.Typography.footnote))
-                                .lineLimit(1)
+
+                        // フォームセクション
+                        enum FormSection {
+                            case basic
+                            case details
+                            case schedule
+                            case category
                         }
-                        .padding(.horizontal, DesignSystem.Spacing.s)
-                        .padding(.vertical, DesignSystem.Spacing.xs)
-                        .foregroundColor(selectedProjectId == project.id ? .white : project.color)
-                        .background(selectedProjectId == project.id ? project.color : project.color.opacity(0.2))
-                        .cornerRadius(DesignSystem.CornerRadius.small)
-                    }
-                }
-            }
-            .padding(.vertical, DesignSystem.Spacing.xxs)
-        }
-    }
-    
-    // タスクの保存
-    private func saveTask() {
-        // バリデーション
-        if title.isEmpty {
-            titleError = "タイトルは必須です"
-            return
-        }
-        
-        // タスクの作成
-        var task = Task(
-            title: title,
-            description: description.isEmpty ? nil : description,
-            priority: priority,
-            status: status,
-            projectId: selectedProjectId,
-            tagIds: selectedTagIds,
-            isRepeating: isRepeating,
-            repeatType: isRepeating ? repeatType : .none
-        )
-        
-        // 期限日の設定
-        if hasDueDate {
-            task.dueDate = dueDate
-        }
-        
-        // リマインダーの設定
-        if hasReminder {
-            task.reminderDate = reminderDate
-            
-            // リマインダー通知の登録
-            NotificationService.shared.scheduleTaskReminder(for: task)
-        }
-        
-        // タスクの保存
-        taskViewModel.addTask(task)
-        
-        // フォームを閉じる
-        presentationMode.wrappedValue.dismiss()
-    }
-}
 
-// フォームセクション
-enum FormSection {
-    case basic
-    case details
-    case schedule
-    case category
-}
+                        // 優先度ボタン
+                        struct PriorityButton: View {
+                            var priority: Priority
+                            var isSelected: Bool
+                            var action: () -> Void
+                            
+                            var body: some View {
+                                Button(action: action) {
+                                    VStack(spacing: DesignSystem.Spacing.xxs) {
+                                        Circle()
+                                            .fill(isSelected ? Color.priorityColor(priority) : Color.priorityColor(priority).opacity(0.3))
+                                            .frame(width: 40, height: 40)
+                                            .overlay(
+                                                Image(systemName: priorityIcon(for: priority))
+                                                    .font(.system(size: 20))
+                                                    .foregroundColor(.white)
+                                            )
+                                        
+                                        Text(priority.title)
+                                            .font(DesignSystem.Typography.font(size: DesignSystem.Typography.caption1))
+                                            .foregroundColor(isSelected ? DesignSystem.Colors.textPrimary : DesignSystem.Colors.textSecondary)
+                                    }
+                                }
+                                .frame(maxWidth: .infinity)
+                            }
+                            
+                            // 優先度に応じたアイコンを取得
+                            private func priorityIcon(for priority: Priority) -> String {
+                                switch priority {
+                                case .low:
+                                    return "arrow.down"
+                                case .medium:
+                                    return "minus"
+                                case .high:
+                                    return "exclamationmark"
+                                }
+                            }
+                        }
 
-// 優先度ボタン
-struct PriorityButton: View {
-    var priority: Priority
-    var isSelected: Bool
-    var action: () -> Void
-    
-    var body: some View {
-        Button(action: action) {
-            VStack(spacing: DesignSystem.Spacing.xxs) {
-                Circle()
-                    .fill(isSelected ? Color.priorityColor(priority) : Color.priorityColor(priority).opacity(0.3))
-                    .frame(width: 40, height: 40)
-                    .overlay(
-                        Image(systemName: priorityIcon(for: priority))
-                            .font(.system(size: 20))
-                            .foregroundColor(.white)
-                    )
-                
-                Text(priority.title)
-                    .font(DesignSystem.Typography.font(size: DesignSystem.Typography.caption1))
-                    .foregroundColor(isSelected ? DesignSystem.Colors.textPrimary : DesignSystem.Colors.textSecondary)
-            }
-        }
-        .frame(maxWidth: .infinity)
-    }
-    
-    // 優先度に応じたアイコンを取得
-    private func priorityIcon(for priority: Priority) -> String {
-        switch priority {
-        case .low:
-            return "arrow.down"
-        case .medium:
-            return "minus"
-        case .high:
-            return "exclamationmark"
-        }
-    }
-}
-
-// プレビュー
-struct TaskCreationView_Previews: PreviewProvider {
-    static var previews: some View {
-        TaskCreationView()
-            .environmentObject(TaskViewModel())
-            .environmentObject(ProjectViewModel())
-            .environmentObject(TagViewModel())
-    }
-}
+                        // プレビュー
+                        struct TaskCreationView_Previews: PreviewProvider {
+                            static var previews: some View {
+                                TaskCreationView()
+                                    .environmentObject(TaskViewModel())
+                                    .environmentObject(ProjectViewModel())
+                                    .environmentObject(TagViewModel())
+                            }
+                        }
