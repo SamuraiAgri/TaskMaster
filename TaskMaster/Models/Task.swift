@@ -113,7 +113,7 @@ struct TMTask: Identifiable, Codable, Hashable {
     // 完全な初期化メソッド
     init(id: UUID = UUID(), title: String, description: String? = nil,
          creationDate: Date = Date(), dueDate: Date? = nil,
-         priority: Priority = .medium, completionDate: Date? = nil, status: TaskStatus = .notStarted,
+         completionDate: Date? = nil, priority: Priority = .medium, status: TaskStatus = .notStarted,
          projectId: UUID? = nil, tagIds: [UUID] = [], isRepeating: Bool = false,
          repeatType: RepeatType = .none, repeatCustomValue: Int? = nil,
          reminderDate: Date? = nil, parentTaskId: UUID? = nil, subTaskIds: [UUID] = []) {
@@ -167,9 +167,9 @@ extension TMTask {
                 title: "アプリのバグ修正",
                 description: "ログイン画面のクラッシュ問題を修正",
                 dueDate: Calendar.current.date(byAdding: .day, value: -1, to: Date()),
+                completionDate: Date(),
                 priority: .high,
-                status: .completed,
-                completionDate: Date()
+                status: .completed
             ),
             TMTask(
                 title: "買い物リスト作成",
