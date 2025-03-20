@@ -49,7 +49,7 @@ enum AppConstants {
 }
 
 /// デザインシステムの定義
-struct TMDesignSystem {
+struct DesignSystem {
     /// アプリのカラーパレット
     struct Colors {
         static let primary = Color(hex: "#4A90E2") ?? .blue

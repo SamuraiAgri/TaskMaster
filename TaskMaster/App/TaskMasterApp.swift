@@ -10,7 +10,7 @@ struct TaskMasterApp: App {
     
     var body: some Scene {
         WindowGroup {
-            MainContentView()
+            ContentView()
                 .environmentObject(taskViewModel)
                 .environmentObject(projectViewModel)
                 .environmentObject(tagViewModel)
@@ -29,56 +29,5 @@ struct TaskMasterApp: App {
                     )
                 }
         }
-    }
-}
-
-// メインコンテンツビュー（タブビュー）
-struct MainContentView: View {
-    @State private var selectedTab = 0
-    
-    var body: some View {
-        TabView(selection: $selectedTab) {
-            HomeView()
-                .tabItem {
-                    Label("ホーム", systemImage: "house")
-                }
-                .tag(0)
-            
-            TaskListView()
-                .tabItem {
-                    Label("タスク", systemImage: "checklist")
-                }
-                .tag(1)
-            
-            ProjectListView()
-                .tabItem {
-                    Label("プロジェクト", systemImage: "folder")
-                }
-                .tag(2)
-            
-            CalendarView()
-                .tabItem {
-                    Label("カレンダー", systemImage: "calendar")
-                }
-                .tag(3)
-            
-            StatisticsView()
-                .tabItem {
-                    Label("統計", systemImage: "chart.bar")
-                }
-                .tag(4)
-        }
-        .accentColor(TMDesignSystem.Colors.primary)
-    }
-}
-
-// プレビュー
-struct MainContentView_Previews: PreviewProvider {
-    static var previews: some View {
-        MainContentView()
-            .environmentObject(TaskViewModel())
-            .environmentObject(ProjectViewModel())
-            .environmentObject(TagViewModel())
-            .environmentObject(HomeViewModel())
     }
 }

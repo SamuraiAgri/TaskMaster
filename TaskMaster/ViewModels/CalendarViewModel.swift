@@ -381,4 +381,5 @@ class CalendarViewModel: ObservableObject {
         
         return Color(cgColor: calendar.cgColor)
     }
+    
 }
