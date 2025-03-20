@@ -10,7 +10,7 @@ struct TaskMasterApp: App {
     
     var body: some Scene {
         WindowGroup {
-            ContentView()
+            MainContentView()
                 .environmentObject(taskViewModel)
                 .environmentObject(projectViewModel)
                 .environmentObject(tagViewModel)
@@ -33,7 +33,7 @@ struct TaskMasterApp: App {
 }
 
 // メインコンテンツビュー（タブビュー）
-struct ContentView: View {
+struct MainContentView: View {
     @State private var selectedTab = 0
     
     var body: some View {
@@ -68,14 +68,14 @@ struct ContentView: View {
                 }
                 .tag(4)
         }
-        .accentColor(DesignSystem.Colors.primary)
+        .accentColor(Color(DesignSystem.Colors.primary))
     }
 }
 
 // プレビュー
-struct ContentView_Previews: PreviewProvider {
+struct MainContentView_Previews: PreviewProvider {
     static var previews: some View {
-        ContentView()
+        MainContentView()
             .environmentObject(TaskViewModel())
             .environmentObject(ProjectViewModel())
             .environmentObject(TagViewModel())

@@ -1,5 +1,6 @@
 import Foundation
 import EventKit
+import Combine
 
 /// カレンダー関連の機能を提供するサービスクラス
 class CalendarService {
@@ -24,15 +25,28 @@ class CalendarService {
     
     /// カレンダーへのアクセス許可状態を確認
     func checkAuthorizationStatus() {
-        self.authorizationStatus = EKEventStore.authorizationStatus(for: .event)
+        if #available(iOS 17.0, *) {
+            self.authorizationStatus = eventStore.authorizationStatus(for: .event)
+        } else {
+            self.authorizationStatus = EKEventStore.authorizationStatus(for: .event)
+        }
     }
     
     /// カレンダーへのアクセス許可をリクエスト
     func requestAccess(completion: @escaping (Bool, Error?) -> Void) {
-        eventStore.requestAccess(to: .event) { [weak self] (granted, error) in
-            DispatchQueue.main.async {
-                self?.checkAuthorizationStatus()
-                completion(granted, error)
+        if #available(iOS 17.0, *) {
+            eventStore.requestFullAccessToEvents { granted, error in
+                DispatchQueue.main.async {
+                    self.checkAuthorizationStatus()
+                    completion(granted, error)
+                }
+            }
+        } else {
+            eventStore.requestAccess(to: .event) { granted, error in
+                DispatchQueue.main.async {
+                    self.checkAuthorizationStatus()
+                    completion(granted, error)
+                }
             }
         }
     }
@@ -42,9 +56,16 @@ class CalendarService {
     /// タスクをカレンダーイベントとして追加する
     func addTaskToCalendar(task: Task, completion: @escaping (Bool, Error?) -> Void) {
         // 許可状態を確認
-        if authorizationStatus != .authorized {
-            completion(false, NSError(domain: "CalendarService", code: 1, userInfo: [NSLocalizedDescriptionKey: "カレンダーへのアクセスが許可されていません。"]))
-            return
+        if #available(iOS 17.0, *) {
+            if authorizationStatus != .fullAccess {
+                completion(false, NSError(domain: "CalendarService", code: 1, userInfo: [NSLocalizedDescriptionKey: "カレンダーへのアクセスが許可されていません。"]))
+                return
+            }
+        } else {
+            if authorizationStatus != .authorized {
+                completion(false, NSError(domain: "CalendarService", code: 1, userInfo: [NSLocalizedDescriptionKey: "カレンダーへのアクセスが許可されていません。"]))
+                return
+            }
         }
         
         // 期限日がないタスクは追加できない
@@ -105,9 +126,16 @@ class CalendarService {
     
     /// 指定した期間内のカレンダーイベントを取得
     func fetchEvents(from startDate: Date, to endDate: Date) -> [EKEvent] {
-        // 許可状態を確認
-        if authorizationStatus != .authorized {
-            return []
+        if #available(iOS 17.0, *) {
+            // iOS 17での許可状態確認
+            if authorizationStatus != .fullAccess {
+                return []
+            }
+        } else {
+            // iOS 17より前の許可状態確認
+            if authorizationStatus != .authorized {
+                return []
+            }
         }
         
         // イベント取得用の述語を作成
@@ -143,8 +171,14 @@ class CalendarService {
     /// タスクに関連するカレンダーイベントを検索
     func findEventForTask(_ task: Task) -> EKEvent? {
         // 許可状態を確認
-        if authorizationStatus != .authorized || task.dueDate == nil {
-            return nil
+        if #available(iOS 17.0, *) {
+            if authorizationStatus != .fullAccess || task.dueDate == nil {
+                return nil
+            }
+        } else {
+            if authorizationStatus != .authorized || task.dueDate == nil {
+                return nil
+            }
         }
         
         // タスクの期限日の前後1日のイベントを取得
@@ -225,8 +259,14 @@ class CalendarService {
     
     /// 利用可能なカレンダーの一覧を取得
     func fetchCalendars() -> [EKCalendar] {
-        if authorizationStatus != .authorized {
-            return []
+        if #available(iOS 17.0, *) {
+            if authorizationStatus != .fullAccess {
+                return []
+            }
+        } else {
+            if authorizationStatus != .authorized {
+                return []
+            }
         }
         
         return eventStore.calendars(for: .event)

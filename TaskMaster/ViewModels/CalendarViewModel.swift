@@ -3,6 +3,29 @@ import SwiftUI
 import Combine
 import EventKit
 
+// カレンダーモード
+enum CalendarMode: Int {
+    case month
+    case week
+}
+
+// カレンダーイベント
+struct CalendarEvent: Identifiable {
+    let id: UUID
+    let title: String
+    let date: Date
+    let isCompleted: Bool
+    let priority: Priority
+    let type: CalendarEventType
+    let color: Color
+}
+
+// カレンダーイベントタイプ
+enum CalendarEventType {
+    case task
+    case calendar
+}
+
 class CalendarViewModel: ObservableObject {
     // 公開プロパティ
     @Published var currentDate: Date = Date()
@@ -156,26 +179,14 @@ class CalendarViewModel: ObservableObject {
         }
         
         // カレンダーインテグレーションが有効な場合、iOSカレンダーのイベントも読み込む
-        if isCalendarIntegrationEnabled && calendarService.authorizationStatus == .authorized {
-            let calendarEvents = calendarService.fetchEvents(from: startDate, to: endDate)
-            
-            for event in calendarEvents {
-                let dayKey = Calendar.current.startOfDay(for: event.startDate)
-                
-                let calEvent = CalendarEvent(
-                    id: UUID(), // カレンダーイベントには一意のIDを生成
-                    title: event.title,
-                    date: event.startDate,
-                    isCompleted: false,
-                    priority: .medium,
-                    type: .calendar,
-                    color: getCalendarColor(event.calendar)
-                )
-                
-                if tempEvents[dayKey] == nil {
-                    tempEvents[dayKey] = [calEvent]
-                } else {
-                    tempEvents[dayKey]?.append(calEvent)
+        if isCalendarIntegrationEnabled {
+            if #available(iOS 17.0, *) {
+                if calendarService.authorizationStatus == .fullAccess {
+                    loadCalendarEvents(startDate: startDate, endDate: endDate, tempEvents: &tempEvents)
+                }
+            } else {
+                if calendarService.authorizationStatus == .authorized {
+                    loadCalendarEvents(startDate: startDate, endDate: endDate, tempEvents: &tempEvents)
                 }
             }
         }
@@ -191,14 +202,46 @@ class CalendarViewModel: ObservableObject {
         }
     }
     
+    // カレンダーイベントの読み込み（リファクタリングのために分離）
+    private func loadCalendarEvents(startDate: Date, endDate: Date, tempEvents: inout [Date: [CalendarEvent]]) {
+        let calendarEvents = calendarService.fetchEvents(from: startDate, to: endDate)
+        
+        for event in calendarEvents {
+            let dayKey = Calendar.current.startOfDay(for: event.startDate)
+            
+            let calEvent = CalendarEvent(
+                id: UUID(), // カレンダーイベントには一意のIDを生成
+                title: event.title,
+                date: event.startDate,
+                isCompleted: false,
+                priority: .medium,
+                type: .calendar,
+                color: getCalendarColor(event.calendar)
+            )
+            
+            if tempEvents[dayKey] == nil {
+                tempEvents[dayKey] = [calEvent]
+            } else {
+                tempEvents[dayKey]?.append(calEvent)
+            }
+        }
+    }
+    
     /// カレンダー権限のチェック
     func checkCalendarAuthorization() {
         calendarService.checkAuthorizationStatus()
         
         // 権限がなくなった場合、インテグレーションを無効に
-        if calendarService.authorizationStatus != .authorized && isCalendarIntegrationEnabled {
-            isCalendarIntegrationEnabled = false
-            UserDefaults.standard.set(false, forKey: calendarIntegrationKey)
+        if #available(iOS 17.0, *) {
+            if calendarService.authorizationStatus != .fullAccess && isCalendarIntegrationEnabled {
+                isCalendarIntegrationEnabled = false
+                UserDefaults.standard.set(false, forKey: calendarIntegrationKey)
+            }
+        } else {
+            if calendarService.authorizationStatus != .authorized && isCalendarIntegrationEnabled {
+                isCalendarIntegrationEnabled = false
+                UserDefaults.standard.set(false, forKey: calendarIntegrationKey)
+            }
         }
         
         loadEvents()
@@ -338,27 +381,4 @@ class CalendarViewModel: ObservableObject {
         
         return Color(cgColor: calendar.cgColor)
     }
-}
-
-// カレンダーモード
-enum CalendarMode: Int {
-    case month
-    case week
-}
-
-// カレンダーイベント
-struct CalendarEvent: Identifiable {
-    let id: UUID
-    let title: String
-    let date: Date
-    let isCompleted: Bool
-    let priority: Priority
-    let type: CalendarEventType
-    let color: Color
-}
-
-// カレンダーイベントタイプ
-enum CalendarEventType {
-    case task
-    case calendar
 }

@@ -15,7 +15,7 @@ struct PriorityBadgeView: View {
             // 優先度のテキスト（オプション）
             if showText {
                 Text(priority.title)
-                    .font(DesignSystem.Typography.font(
+                    .font(Font.system(
                         size: compactMode ? DesignSystem.Typography.caption2 : DesignSystem.Typography.caption1
                     ))
                     .foregroundColor(Color.priorityColor(priority))
@@ -51,7 +51,7 @@ struct PriorityButtonView: View {
                     )
                 
                 Text(priority.title)
-                    .font(DesignSystem.Typography.font(size: DesignSystem.Typography.caption1))
+                    .font(Font.system(size: DesignSystem.Typography.caption1))
                     .foregroundColor(isSelected ? DesignSystem.Colors.textPrimary : DesignSystem.Colors.textSecondary)
             }
         }
@@ -83,7 +83,7 @@ struct PriorityIndicatorView: View {
                 .frame(width: 8, height: 8)
             
             Text(priority.title)
-                .font(DesignSystem.Typography.font(size: DesignSystem.Typography.caption1))
+                .font(Font.system(size: DesignSystem.Typography.caption1))
                 .foregroundColor(DesignSystem.Colors.textSecondary)
         }
         .accessibilityLabel("\(priority.title)優先度")
@@ -99,7 +99,7 @@ struct PriorityFilterButtonView: View {
     var body: some View {
         Button(action: action) {
             Text(priority.title)
-                .font(DesignSystem.Typography.font(size: DesignSystem.Typography.footnote))
+                .font(Font.system(size: DesignSystem.Typography.footnote))
                 .padding(.horizontal, DesignSystem.Spacing.s)
                 .padding(.vertical, DesignSystem.Spacing.xs)
                 .foregroundColor(isSelected ? .white : Color.priorityColor(priority))

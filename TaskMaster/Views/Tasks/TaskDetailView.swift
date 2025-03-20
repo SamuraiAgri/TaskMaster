@@ -46,7 +46,7 @@ struct TaskDetailView: View {
                 VStack {
                     ProgressView()
                     Text("タスクを読み込み中...")
-                        .font(DesignSystem.Typography.font(size: DesignSystem.Typography.subheadline))
+                        .font(Font.system(size: DesignSystem.Typography.subheadline))
                         .foregroundColor(DesignSystem.Colors.textSecondary)
                         .padding()
                 }
@@ -130,7 +130,7 @@ struct TaskDetailView: View {
             HStack {
                 // ステータス表示
                 Text(task.status.rawValue)
-                    .font(DesignSystem.Typography.font(size: DesignSystem.Typography.subheadline))
+                    .font(Font.system(size: DesignSystem.Typography.subheadline))
                     .padding(.horizontal, DesignSystem.Spacing.s)
                     .padding(.vertical, DesignSystem.Spacing.xxs)
                     .background(Color.statusColor(task.status).opacity(0.2))
@@ -145,7 +145,7 @@ struct TaskDetailView: View {
             
             // タイトル
             Text(task.title)
-                .font(DesignSystem.Typography.font(size: DesignSystem.Typography.title2, weight: .bold))
+                .font(Font.system(size: DesignSystem.Typography.title2, weight: .bold))
                 .foregroundColor(DesignSystem.Colors.textPrimary)
             
             // 期限と作成日
@@ -153,7 +153,7 @@ struct TaskDetailView: View {
                 if let dueDate = task.dueDate {
                     Label {
                         Text(dueDate.formatted())
-                            .font(DesignSystem.Typography.font(size: DesignSystem.Typography.subheadline))
+                            .font(Font.system(size: DesignSystem.Typography.subheadline))
                             .foregroundColor(taskViewModel.dueDateColor(for: task))
                     } icon: {
                         Image(systemName: "calendar")
@@ -163,7 +163,7 @@ struct TaskDetailView: View {
                 
                 Label {
                     Text(task.creationDate.formatted())
-                        .font(DesignSystem.Typography.font(size: DesignSystem.Typography.subheadline))
+                        .font(Font.system(size: DesignSystem.Typography.subheadline))
                         .foregroundColor(DesignSystem.Colors.textSecondary)
                 } icon: {
                     Image(systemName: "clock")
@@ -197,13 +197,13 @@ struct TaskDetailView: View {
         VStack(alignment: .leading, spacing: DesignSystem.Spacing.m) {
             // セクションタイトル
             Text("詳細")
-                .font(DesignSystem.Typography.font(size: DesignSystem.Typography.headline, weight: .semibold))
+                .font(Font.system(size: DesignSystem.Typography.headline, weight: .semibold))
                 .foregroundColor(DesignSystem.Colors.textPrimary)
             
             // 説明文
             if let description = task.description, !description.isEmpty {
                 Text(description)
-                    .font(DesignSystem.Typography.font(size: DesignSystem.Typography.body))
+                    .font(Font.system(size: DesignSystem.Typography.body))
                     .foregroundColor(DesignSystem.Colors.textPrimary)
                     .padding()
                     .frame(maxWidth: .infinity, alignment: .leading)
@@ -211,7 +211,7 @@ struct TaskDetailView: View {
                     .cornerRadius(DesignSystem.CornerRadius.medium)
             } else {
                 Text("説明はありません")
-                    .font(DesignSystem.Typography.font(size: DesignSystem.Typography.body))
+                    .font(Font.system(size: DesignSystem.Typography.body))
                     .foregroundColor(DesignSystem.Colors.textSecondary)
                     .italic()
             }
@@ -237,7 +237,7 @@ struct TaskDetailView: View {
     private func projectSection(project: Project) -> some View {
         VStack(alignment: .leading, spacing: DesignSystem.Spacing.m) {
             Text("プロジェクト")
-                .font(DesignSystem.Typography.font(size: DesignSystem.Typography.headline, weight: .semibold))
+                .font(Font.system(size: DesignSystem.Typography.headline, weight: .semibold))
                 .foregroundColor(DesignSystem.Colors.textPrimary)
             
             NavigationLink(destination: ProjectDetailView(project: project)) {
@@ -247,7 +247,7 @@ struct TaskDetailView: View {
                         .frame(width: 12, height: 12)
                     
                     Text(project.name)
-                        .font(DesignSystem.Typography.font(size: DesignSystem.Typography.callout))
+                        .font(Font.system(size: DesignSystem.Typography.callout))
                         .foregroundColor(DesignSystem.Colors.textPrimary)
                     
                     Spacer()
@@ -267,7 +267,7 @@ struct TaskDetailView: View {
     private func tagsSection(tags: [Tag]) -> some View {
         VStack(alignment: .leading, spacing: DesignSystem.Spacing.m) {
             Text("タグ")
-                .font(DesignSystem.Typography.font(size: DesignSystem.Typography.headline, weight: .semibold))
+                .font(Font.system(size: DesignSystem.Typography.headline, weight: .semibold))
                 .foregroundColor(DesignSystem.Colors.textPrimary)
             
             TagsListView(tags: tags)
@@ -284,13 +284,13 @@ struct TaskDetailView: View {
                 .frame(width: 24)
             
             Text(title)
-                .font(DesignSystem.Typography.font(size: DesignSystem.Typography.subheadline))
+                .font(Font.system(size: DesignSystem.Typography.subheadline))
                 .foregroundColor(DesignSystem.Colors.textSecondary)
             
             Spacer()
             
             Text(value)
-                .font(DesignSystem.Typography.font(size: DesignSystem.Typography.subheadline))
+                .font(Font.system(size: DesignSystem.Typography.subheadline))
                 .foregroundColor(DesignSystem.Colors.textPrimary)
         }
         .padding()
@@ -299,27 +299,17 @@ struct TaskDetailView: View {
     }
 }
 
-// 優先度バッジビュー
-struct PriorityBadgeView: View {
-    var priority: Priority
-    var showText: Bool = true
+// TaskEditViewの仮のプレースホルダー（実際の実装はTaskCreationViewを元に作成する）
+struct TaskEditView: View {
+    @Environment(\.presentationMode) var presentationMode
+    @State var task: Task
+    var onSave: (Task) -> Void
     
     var body: some View {
-        HStack(spacing: DesignSystem.Spacing.xs) {
-            Circle()
-                .fill(Color.priorityColor(priority))
-                .frame(width: 8, height: 8)
-            
-            if showText {
-                Text(priority.title)
-                    .font(DesignSystem.Typography.font(size: DesignSystem.Typography.caption1))
-                    .foregroundColor(Color.priorityColor(priority))
+        Text("タスク編集画面はまだ実装されていません")
+            .onDisappear {
+                onSave(task)
             }
-        }
-        .padding(.horizontal, DesignSystem.Spacing.s)
-        .padding(.vertical, DesignSystem.Spacing.xxs)
-        .background(Color.priorityColor(priority).opacity(0.2))
-        .cornerRadius(DesignSystem.CornerRadius.small)
     }
 }
 

@@ -3,6 +3,9 @@ import Combine
 
 // MARK: - データサービスのプロトコル
 protocol DataServiceProtocol {
+    // 変更通知のためのパブリッシャー
+    var objectWillChange: PassthroughSubject<Void, Never> { get }
+    
     // タスク関連
     func fetchTasks() -> [Task]
     func getTask(by id: UUID) -> Task?
