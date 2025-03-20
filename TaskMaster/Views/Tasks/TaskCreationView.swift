@@ -86,7 +86,7 @@ struct TaskCreationView: View {
                             .padding()
                             .background(DesignSystem.Colors.card)
                             .cornerRadius(DesignSystem.CornerRadius.medium)
-                            .onChange(of: title) { newValue in
+                            .onChange(of: title) { oldValue, newValue in
                                 if newValue.isEmpty {
                                     titleError = "タイトルは必須です"
                                 } else {
