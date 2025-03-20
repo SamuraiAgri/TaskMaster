@@ -49,9 +49,9 @@ enum AppConstants {
 }
 
 /// デザインシステムの定義
-enum DesignSystem {
+struct TMDesignSystem {
     /// アプリのカラーパレット
-    enum Colors {
+    struct Colors {
         static let primary = Color(hex: "#4A90E2") ?? .blue
         static let secondary = Color(hex: "#9B9B9B") ?? .gray
         static let accent = Color(hex: "#50C356") ?? .green
@@ -68,7 +68,7 @@ enum DesignSystem {
     }
     
     /// タイポグラフィサイズ
-    enum Typography {
+    struct Typography {
         static let largeTitle: CGFloat = 34
         static let title1: CGFloat = 28
         static let title2: CGFloat = 22
@@ -88,7 +88,7 @@ enum DesignSystem {
     }
     
     /// スペーシング
-    enum Spacing {
+    struct Spacing {
         static let xxs: CGFloat = 4
         static let xs: CGFloat = 8
         static let s: CGFloat = 12
@@ -99,28 +99,28 @@ enum DesignSystem {
     }
     
     /// 角丸の半径
-    enum CornerRadius {
+    struct CornerRadius {
         static let small: CGFloat = 8
         static let medium: CGFloat = 12
         static let large: CGFloat = 16
     }
     
     /// シャドウ定義
-    enum Shadow {
-        static let small = TaskMaster.Shadow(color: .black.opacity(0.1), radius: 4, x: 0, y: 2)
-        static let medium = TaskMaster.Shadow(color: .black.opacity(0.15), radius: 8, x: 0, y: 4)
-        static let large = TaskMaster.Shadow(color: .black.opacity(0.2), radius: 16, x: 0, y: 8)
+    struct Shadows {
+        static let small = TMShadow(color: .black.opacity(0.1), radius: 4, x: 0, y: 2)
+        static let medium = TMShadow(color: .black.opacity(0.15), radius: 8, x: 0, y: 4)
+        static let large = TMShadow(color: .black.opacity(0.2), radius: 16, x: 0, y: 8)
     }
     
     /// アニメーション
-    enum Animation {
+    struct Animation {
         static let standard = SwiftUI.Animation.easeInOut(duration: 0.3)
         static let quick = SwiftUI.Animation.easeOut(duration: 0.2)
         static let slow = SwiftUI.Animation.easeInOut(duration: 0.5)
     }
     
     /// UIコンポーネントサイズ
-    enum ComponentSize {
+    struct ComponentSize {
         static let buttonHeight: CGFloat = 44
         static let inputHeight: CGFloat = 44
         static let iconSmall: CGFloat = 16
@@ -130,9 +130,39 @@ enum DesignSystem {
 }
 
 /// シャドウ構造体
-struct Shadow {
+struct TMShadow {
     let color: Color
     let radius: CGFloat
     let x: CGFloat
     let y: CGFloat
+}
+
+// シャドウ拡張
+extension View {
+    func withShadow(_ shadow: TMShadow) -> some View {
+        self.shadow(
+            color: shadow.color,
+            radius: shadow.radius,
+            x: shadow.x,
+            y: shadow.y
+        )
+    }
+}
+
+// 角丸の設定
+extension View {
+    func cornerRadius(_ radius: CGFloat, corners: UIRectCorner) -> some View {
+        clipShape(RoundedCorner(radius: radius, corners: corners))
+    }
+}
+
+// カスタム角丸形状
+struct RoundedCorner: Shape {
+    var radius: CGFloat = .infinity
+    var corners: UIRectCorner = .allCorners
+    
+    func path(in rect: CGRect) -> Path {
+        let path = UIBezierPath(roundedRect: rect, byRoundingCorners: corners, cornerRadii: CGSize(width: radius, height: radius))
+        return Path(path.cgPath)
+    }
 }

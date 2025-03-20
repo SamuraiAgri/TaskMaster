@@ -54,7 +54,7 @@ class CalendarService {
     // MARK: - カレンダーイベント操作
     
     /// タスクをカレンダーイベントとして追加する
-    func addTaskToCalendar(task: Task, completion: @escaping (Bool, Error?) -> Void) {
+    func addTaskToCalendar(task: TMTask, completion: @escaping (Bool, Error?) -> Void) {
         // 許可状態を確認
         if #available(iOS 17.0, *) {
             if authorizationStatus != .fullAccess {
@@ -169,7 +169,7 @@ class CalendarService {
     }
     
     /// タスクに関連するカレンダーイベントを検索
-    func findEventForTask(_ task: Task) -> EKEvent? {
+    func findEventForTask(_ task: TMTask) -> EKEvent? {
         // 許可状態を確認
         if #available(iOS 17.0, *) {
             if authorizationStatus != .fullAccess || task.dueDate == nil {
@@ -201,7 +201,7 @@ class CalendarService {
     }
     
     /// タスクに関連するカレンダーイベントを更新
-    func updateEventForTask(_ task: Task, completion: @escaping (Bool, Error?) -> Void) {
+    func updateEventForTask(_ task: TMTask, completion: @escaping (Bool, Error?) -> Void) {
         guard let event = findEventForTask(task) else {
             // イベントが見つからない場合は新規作成
             addTaskToCalendar(task: task, completion: completion)
@@ -241,7 +241,7 @@ class CalendarService {
     }
     
     /// タスクに関連するカレンダーイベントを削除
-    func removeEventForTask(_ task: Task, completion: @escaping (Bool, Error?) -> Void) {
+    func removeEventForTask(_ task: TMTask, completion: @escaping (Bool, Error?) -> Void) {
         guard let event = findEventForTask(task) else {
             // イベントが見つからない場合は成功扱い
             completion(true, nil)
@@ -273,7 +273,7 @@ class CalendarService {
     }
     
     /// タスクの完了状態に応じてカレンダーイベントを更新
-    func updateEventForCompletedTask(_ task: Task, completion: @escaping (Bool, Error?) -> Void) {
+    func updateEventForCompletedTask(_ task: TMTask, completion: @escaping (Bool, Error?) -> Void) {
         guard let event = findEventForTask(task) else {
             completion(false, nil)
             return

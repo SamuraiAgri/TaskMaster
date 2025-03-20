@@ -56,7 +56,7 @@ enum TaskStatus: String, Codable, CaseIterable, Identifiable {
 }
 
 // タスクモデル
-struct Task: Identifiable, Codable, Hashable {
+struct TMTask: Identifiable, Codable, Hashable {
     var id: UUID = UUID()
     var title: String
     var description: String?
@@ -138,17 +138,17 @@ struct Task: Identifiable, Codable, Hashable {
 }
 
 // MARK: - サンプルデータ
-extension Task {
-    static var samples: [Task] {
+extension TMTask {
+    static var samples: [TMTask] {
         [
-            Task(
+            TMTask(
                 title: "プロジェクト提案書の作成",
                 description: "クライアントXYZ向けの新規プロジェクト提案書を作成する",
                 dueDate: Calendar.current.date(byAdding: .day, value: 2, to: Date()),
                 priority: .high,
                 status: .inProgress
             ),
-            Task(
+            TMTask(
                 title: "週次ミーティングの準備",
                 dueDate: Calendar.current.date(byAdding: .day, value: 1, to: Date()),
                 priority: .medium,
@@ -156,14 +156,14 @@ extension Task {
                 isRepeating: true,
                 repeatType: .weekly
             ),
-            Task(
+            TMTask(
                 title: "メールの返信",
                 description: "取引先からの問い合わせに返信する",
                 dueDate: Date(),
                 priority: .low,
                 status: .notStarted
             ),
-            Task(
+            TMTask(
                 title: "アプリのバグ修正",
                 description: "ログイン画面のクラッシュ問題を修正",
                 dueDate: Calendar.current.date(byAdding: .day, value: -1, to: Date()),
@@ -171,7 +171,7 @@ extension Task {
                 status: .completed,
                 completionDate: Date()
             ),
-            Task(
+            TMTask(
                 title: "買い物リスト作成",
                 priority: .low,
                 status: .notStarted

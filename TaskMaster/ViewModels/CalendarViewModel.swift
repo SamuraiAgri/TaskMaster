@@ -4,7 +4,7 @@ import Combine
 import EventKit
 
 // カレンダーモード
-enum CalendarMode: Int {
+enum TMCalendarMode: Int {
     case month
     case week
 }
@@ -30,7 +30,7 @@ class CalendarViewModel: ObservableObject {
     // 公開プロパティ
     @Published var currentDate: Date = Date()
     @Published var selectedDate: Date = Date()
-    @Published var calendarMode: CalendarMode = .month
+    @Published var calendarMode: TMCalendarMode = .month
     @Published var events: [Date: [CalendarEvent]] = [:]
     @Published var isCalendarIntegrationEnabled: Bool = false
     @Published var isLoading: Bool = false
@@ -85,7 +85,7 @@ class CalendarViewModel: ObservableObject {
     }
     
     /// 表示モードを変更（月表示/週表示）
-    func changeMode(to mode: CalendarMode) {
+    func changeMode(to mode: TMCalendarMode) {
         calendarMode = mode
         loadEvents()
     }
@@ -363,7 +363,7 @@ class CalendarViewModel: ObservableObject {
     }
     
     /// タスクの色を取得（優先度とプロジェクトに基づく）
-    private func getTaskColor(_ task: Task) -> Color {
+    private func getTaskColor(_ task: TMTask) -> Color {
         // プロジェクトがある場合はそのプロジェクトの色を使用
         if let projectId = task.projectId, let project = dataService.getProject(by: projectId) {
             return project.color
@@ -376,7 +376,7 @@ class CalendarViewModel: ObservableObject {
     /// カレンダーの色を取得
     private func getCalendarColor(_ calendar: EKCalendar?) -> Color {
         guard let calendar = calendar else {
-            return DesignSystem.Colors.secondary
+            return TMDesignSystem.Colors.secondary
         }
         
         return Color(cgColor: calendar.cgColor)

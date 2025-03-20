@@ -59,7 +59,7 @@ struct DailyCompletion: Identifiable {
 }
 
 // 集計期間
-enum TimeFrame: String, CaseIterable {
+enum TMTimeFrame: String, CaseIterable {
     case week = "週"
     case month = "月"
     case year = "年"
