@@ -24,7 +24,7 @@ struct TaskCreationView: View {
     @State private var showingReminderPicker: Bool = false
     @State private var hasDueDate: Bool = true
     @State private var hasReminder: Bool = false
-    @State private var activeSection: FormSection? = .basic
+    @State private var activeSection: TaskFormSection? = .basic
     
     // バリデーション
     @State private var titleError: String? = nil
@@ -86,7 +86,7 @@ struct TaskCreationView: View {
                             .padding()
                             .background(DesignSystem.Colors.card)
                             .cornerRadius(DesignSystem.CornerRadius.medium)
-                            .onChange(of: title) { newValue in
+                            .onChange(of: title) { oldValue, newValue in
                                 if newValue.isEmpty {
                                     titleError = "タイトルは必須です"
                                 } else {
@@ -123,7 +123,7 @@ struct TaskCreationView: View {
                         
                         HStack {
                             ForEach(Priority.allCases) { priority in
-                                PriorityButton(
+                                TaskPriorityButton(
                                     priority: priority,
                                     isSelected: self.priority == priority,
                                     action: {
@@ -296,7 +296,7 @@ struct TaskCreationView: View {
     }
     
     // セクションヘッダー
-    private func sectionHeader(title: String, section: FormSection) -> some View {
+    private func sectionHeader(title: String, section: TaskFormSection) -> some View {
         Button(action: {
             if activeSection == section {
                 activeSection = nil
@@ -465,7 +465,7 @@ struct TaskCreationView: View {
 }
 
 // フォームセクション
-enum FormSection {
+enum TaskFormSection {
     case basic
     case details
     case schedule
@@ -473,7 +473,7 @@ enum FormSection {
 }
 
 // 優先度ボタン
-struct PriorityButton: View {
+struct TaskPriorityButton: View {
     var priority: Priority
     var isSelected: Bool
     var action: () -> Void
