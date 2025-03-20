@@ -4,8 +4,8 @@ import SwiftUI
 
 class TaskViewModel: ObservableObject {
     // 公開プロパティ
-    @Published var tasks: [Task] = []
-    @Published var filteredTasks: [Task] = []
+    @Published var tasks: [TMTask] = []
+    @Published var filteredTasks: [TMTask] = []
     @Published var searchText: String = ""
     @Published var selectedFilter: TaskFilter = .all
     @Published var selectedSortOption: TaskSortOption = .dueDate
@@ -40,33 +40,117 @@ class TaskViewModel: ObservableObject {
                 self?.filterAndSortTasks()
             }
             .store(in: &cancellables)
-        
-        // データサービスの変更通知を購読
-        dataService.objectWillChange
-            .sink { [weak self] _ in
-                self?.loadTasks()
-            }
-            .store(in: &cancellables)
     }
     
     // MARK: - 公開メソッド
     
     // タスクの読み込み
     func loadTasks() {
-        tasks = dataService.fetchTasks()
+        tasks = dataService.fetchTasks().map { task in
+            // Task型をTMTask型に変換するロジックを記述
+            TMTask(
+                id: task.id ?? UUID(),
+                title: task.title ?? "",
+                description: task.taskDescription,
+                creationDate: task.creationDate ?? Date(),
+                dueDate: task.dueDate,
+                priorityAndCompletion: task.completionDate,
+                priority: Priority(rawValue: Int(task.priority)) ?? .medium,
+                status: TaskStatus(rawValue: task.status ?? "") ?? .notStarted,
+                projectId: task.project?.id,
+                tagIds: Array(task.tags?.compactMap { ($0 as? Tag)?.id } ?? []),
+                isRepeating: task.isRepeating,
+                repeatType: RepeatType(rawValue: task.repeatType ?? "") ?? .none,
+                repeatCustomValue: task.repeatCustomValue != 0 ? Int(task.repeatCustomValue) : nil,
+                reminderDate: task.reminderDate,
+                parentTaskId: task.parentTask?.id,
+                subTaskIds: Array(task.subTasks?.compactMap { ($0 as? Task)?.id } ?? [])
+            )
+        }
         filterAndSortTasks()
     }
     
     // タスクの追加
-    func addTask(_ task: Task) {
-        dataService.addTask(task)
+    func addTask(_ task: TMTask) {
+        // TMTaskをCoreDataのTaskに変換
+        let newTask = Task(context: dataService.viewContext)
+        newTask.id = task.id
+        newTask.title = task.title
+        newTask.taskDescription = task.description
+        newTask.creationDate = task.creationDate
+        newTask.dueDate = task.dueDate
+        newTask.completionDate = task.completionDate
+        newTask.priority = Int16(task.priority.rawValue)
+        newTask.status = task.status.rawValue
+        newTask.isRepeating = task.isRepeating
+        newTask.repeatType = task.repeatType.rawValue
+        newTask.repeatCustomValue = task.repeatCustomValue != nil ? Int16(task.repeatCustomValue!) : 0
+        newTask.reminderDate = task.reminderDate
+        
+        // プロジェクト関連付け
+        if let projectId = task.projectId,
+           let project = dataService.getProject(by: projectId) {
+            newTask.project = project
+        }
+        
+        // タグ関連付け
+        for tagId in task.tagIds {
+            if let tag = dataService.getTag(by: tagId) {
+                newTask.addToTags(tag)
+            }
+        }
+        
+        // 親タスク関連付け
+        if let parentTaskId = task.parentTaskId,
+           let parentTask = dataService.getTask(by: parentTaskId) {
+            newTask.parentTask = parentTask
+        }
+        
+        dataService.saveContext()
         loadTasks()
     }
     
     // タスクの更新
-    func updateTask(_ task: Task) {
-        dataService.updateTask(task)
-        loadTasks()
+    func updateTask(_ task: TMTask) {
+        if let existingTask = dataService.getTask(by: task.id) {
+            existingTask.title = task.title
+            existingTask.taskDescription = task.description
+            existingTask.dueDate = task.dueDate
+            existingTask.completionDate = task.completionDate
+            existingTask.priority = Int16(task.priority.rawValue)
+            existingTask.status = task.status.rawValue
+            existingTask.isRepeating = task.isRepeating
+            existingTask.repeatType = task.repeatType.rawValue
+            existingTask.repeatCustomValue = task.repeatCustomValue != nil ? Int16(task.repeatCustomValue!) : 0
+            existingTask.reminderDate = task.reminderDate
+            
+            // プロジェクト関連付け
+            if let projectId = task.projectId,
+               let project = dataService.getProject(by: projectId) {
+                existingTask.project = project
+            } else {
+                existingTask.project = nil
+            }
+            
+            // タグ関連付け
+            existingTask.removeFromTags(existingTask.tags ?? NSSet())
+            for tagId in task.tagIds {
+                if let tag = dataService.getTag(by: tagId) {
+                    existingTask.addToTags(tag)
+                }
+            }
+            
+            // 親タスク関連付け
+            if let parentTaskId = task.parentTaskId,
+               let parentTask = dataService.getTask(by: parentTaskId) {
+                existingTask.parentTask = parentTask
+            } else {
+                existingTask.parentTask = nil
+            }
+            
+            dataService.saveContext()
+            loadTasks()
+        }
     }
     
     // タスクの削除
@@ -85,12 +169,12 @@ class TaskViewModel: ObservableObject {
     }
     
     // タスクの取得（ID指定）
-    func getTask(by id: UUID) -> Task? {
-        return dataService.getTask(by: id)
+    func getTask(by id: UUID) -> TMTask? {
+        return tasks.first { $0.id == id }
     }
     
     // タスクステータスの切り替え
-    func toggleTaskCompletion(_ task: Task) {
+    func toggleTaskCompletion(_ task: TMTask) {
         var updatedTask = task
         
         if task.isCompleted {
@@ -105,36 +189,36 @@ class TaskViewModel: ObservableObject {
     }
     
     // タスク期限による色取得
-    func dueDateColor(for task: Task) -> Color {
+    func dueDateColor(for task: TMTask) -> Color {
         guard let daysUntilDue = task.daysUntilDue else {
-            return DesignSystem.Colors.textSecondary
+            return TMDesignSystem.Colors.textSecondary
         }
         
         if task.isCompleted {
-            return DesignSystem.Colors.success
+            return TMDesignSystem.Colors.success
         } else if daysUntilDue < 0 {
-            return DesignSystem.Colors.error
+            return TMDesignSystem.Colors.error
         } else if daysUntilDue == 0 {
-            return DesignSystem.Colors.warning
+            return TMDesignSystem.Colors.warning
         } else if daysUntilDue <= 2 {
-            return DesignSystem.Colors.info
+            return TMDesignSystem.Colors.info
         } else {
-            return DesignSystem.Colors.textSecondary
+            return TMDesignSystem.Colors.textSecondary
         }
     }
     
     // プロジェクトに属するタスクのフィルタリング
-    func tasksForProject(_ projectId: UUID) -> [Task] {
+    func tasksForProject(_ projectId: UUID) -> [TMTask] {
         return tasks.filter { $0.projectId == projectId }
     }
     
     // タグに属するタスクのフィルタリング
-    func tasksForTag(_ tagId: UUID) -> [Task] {
+    func tasksForTag(_ tagId: UUID) -> [TMTask] {
         return tasks.filter { $0.tagIds.contains(tagId) }
     }
     
     // 今日のタスク取得
-    func todayTasks() -> [Task] {
+    func todayTasks() -> [TMTask] {
         return tasks.filter { task in
             if let dueDate = task.dueDate {
                 return Calendar.current.isDateInToday(dueDate) && !task.isCompleted
@@ -144,7 +228,7 @@ class TaskViewModel: ObservableObject {
     }
     
     // 明日のタスク取得
-    func tomorrowTasks() -> [Task] {
+    func tomorrowTasks() -> [TMTask] {
         return tasks.filter { task in
             if let dueDate = task.dueDate {
                 return Calendar.current.isDateInTomorrow(dueDate) && !task.isCompleted
@@ -154,19 +238,19 @@ class TaskViewModel: ObservableObject {
     }
     
     // 期限切れのタスク取得
-    func overdueTasks() -> [Task] {
+    func overdueTasks() -> [TMTask] {
         return tasks.filter { task in
             return task.isOverdue && !task.isCompleted
         }
     }
     
     // 完了したタスク取得
-    func completedTasks() -> [Task] {
+    func completedTasks() -> [TMTask] {
         return tasks.filter { $0.isCompleted }
     }
     
     // 指定した日付のタスク取得
-    func tasksForDate(_ date: Date) -> [Task] {
+    func tasksForDate(_ date: Date) -> [TMTask] {
         return tasks.filter { task in
             if let dueDate = task.dueDate {
                 return Calendar.current.isDate(dueDate, inSameDayAs: date)

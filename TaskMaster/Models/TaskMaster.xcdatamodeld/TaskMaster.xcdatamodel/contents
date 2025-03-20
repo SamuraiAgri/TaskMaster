@@ -16,15 +16,10 @@
         <attribute name="creationDate" optional="YES" attributeType="Date" usesScalarValueType="NO"/>
         <attribute name="id" optional="YES" attributeType="UUID" usesScalarValueType="NO"/>
         <attribute name="name" optional="YES" attributeType="String"/>
-        <relationship name="projects" optional="YES" toMany="YES" deletionRule="Nullify" destinationEntity="Project"/>
+        <relationship name="projects" optional="YES" toMany="YES" deletionRule="Nullify" destinationEntity="Project" inverseName="category" inverseEntity="Project"/>
         <relationship name="tags" optional="YES" toMany="YES" deletionRule="Nullify" destinationEntity="Tag" inverseName="category" inverseEntity="Tag"/>
     </entity>
     <entity name="Project" representedClassName="Project" syncable="YES" codeGenerationType="class">
-        <attribute name="attribute" optional="YES"/>
-        <attribute name="attribute1" optional="YES"/>
-        <attribute name="attribute2" optional="YES"/>
-        <attribute name="attribute3" optional="YES"/>
-        <attribute name="attribute4" optional="YES"/>
         <attribute name="colorHex" optional="YES" attributeType="String"/>
         <attribute name="completionDate" optional="YES" attributeType="Date" usesScalarValueType="NO"/>
         <attribute name="creationDate" optional="YES" attributeType="Date" usesScalarValueType="NO"/>
@@ -36,7 +31,7 @@
         <attribute name="name" optional="YES" attributeType="String"/>
         <attribute name="projectDescription" optional="YES" attributeType="String"/>
         <attribute name="targetCompletionDate" optional="YES" attributeType="Date" usesScalarValueType="NO"/>
-        <relationship name="category" optional="YES" maxCount="1" deletionRule="Nullify" destinationEntity="Category"/>
+        <relationship name="category" optional="YES" maxCount="1" deletionRule="Nullify" destinationEntity="Category" inverseName="projects" inverseEntity="Category"/>
         <relationship name="parentProject" optional="YES" maxCount="1" deletionRule="Nullify" destinationEntity="Project" inverseName="parentProject" inverseEntity="Project"/>
         <relationship name="subProjects" optional="YES" toMany="YES" deletionRule="Nullify" destinationEntity="Project" inverseName="subProjects" inverseEntity="Project"/>
         <relationship name="tasks" optional="YES" toMany="YES" deletionRule="Nullify" destinationEntity="Task" inverseName="project" inverseEntity="Task"/>
@@ -45,7 +40,7 @@
         <attribute name="creationDate" optional="YES" attributeType="Date" usesScalarValueType="NO"/>
         <attribute name="currentOccurrence" optional="YES" attributeType="Integer 16" defaultValueString="0" usesScalarValueType="YES"/>
         <attribute name="dayOfMonth" optional="YES" attributeType="Integer 16" defaultValueString="0" usesScalarValueType="YES"/>
-        <attribute name="daysOfWeek" optional="YES" attributeType="Transformable"/>
+        <attribute name="daysOfWeek" optional="YES" attributeType="Transformable" valueTransformerName="NSSecureUnarchiveFromDataTransformerName"/>
         <attribute name="endDate" optional="YES" attributeType="Date" usesScalarValueType="NO"/>
         <attribute name="id" optional="YES" attributeType="UUID" usesScalarValueType="NO"/>
         <attribute name="interval" optional="YES" attributeType="Integer 16" defaultValueString="0" usesScalarValueType="YES"/>
@@ -55,7 +50,7 @@
         <relationship name="task" optional="YES" maxCount="1" deletionRule="Nullify" destinationEntity="Task" inverseName="repeatRule" inverseEntity="Task"/>
     </entity>
     <entity name="Settings" representedClassName="Settings" syncable="YES" codeGenerationType="class">
-        <attribute name="calendarIdentifiers" optional="YES" attributeType="Transformable"/>
+        <attribute name="calendarIdentifiers" optional="YES" attributeType="Transformable" valueTransformerName="NSSecureUnarchiveFromDataTransformerName"/>
         <attribute name="calendarIntegrationEnabled" optional="YES" attributeType="Boolean" usesScalarValueType="YES"/>
         <attribute name="dailyReminderEnabled" optional="YES" attributeType="Boolean" usesScalarValueType="YES"/>
         <attribute name="dailyReminderTime" optional="YES" attributeType="Date" usesScalarValueType="NO"/>
@@ -110,11 +105,11 @@
         <attribute name="taskDescription" optional="YES" attributeType="String"/>
         <attribute name="title" optional="YES" attributeType="String"/>
         <relationship name="attachments" optional="YES" toMany="YES" deletionRule="Nullify" destinationEntity="Attachment" inverseName="task" inverseEntity="Attachment"/>
-        <relationship name="parentTask" optional="YES" maxCount="1" deletionRule="Nullify" destinationEntity="Task"/>
+        <relationship name="parentTask" optional="YES" maxCount="1" deletionRule="Nullify" destinationEntity="Task" inverseName="subTasks" inverseEntity="Task"/>
         <relationship name="progressEntries" optional="YES" toMany="YES" deletionRule="Nullify" destinationEntity="TaskProgress" inverseName="task" inverseEntity="TaskProgress"/>
         <relationship name="project" optional="YES" maxCount="1" deletionRule="Nullify" destinationEntity="Project" inverseName="tasks" inverseEntity="Project"/>
         <relationship name="repeatRule" optional="YES" maxCount="1" deletionRule="Nullify" destinationEntity="RepeatRule" inverseName="task" inverseEntity="RepeatRule"/>
-        <relationship name="subTasks" optional="YES" toMany="YES" deletionRule="Nullify" destinationEntity="Task"/>
+        <relationship name="subTasks" optional="YES" toMany="YES" deletionRule="Nullify" destinationEntity="Task" inverseName="parentTask" inverseEntity="Task"/>
         <relationship name="tags" optional="YES" toMany="YES" deletionRule="Nullify" destinationEntity="Tag" inverseName="tasks" inverseEntity="Tag"/>
         <fetchedProperty name="byCompletionDate" optional="YES">
             <fetchRequest name="fetchedPropertyFetchRequest" entity="Task"/>

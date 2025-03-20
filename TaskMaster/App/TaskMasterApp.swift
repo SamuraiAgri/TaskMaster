@@ -68,7 +68,7 @@ struct MainContentView: View {
                 }
                 .tag(4)
         }
-        .accentColor(Color(DesignSystem.Colors.primary))
+        .accentColor(TMDesignSystem.Colors.primary)
     }
 }
 

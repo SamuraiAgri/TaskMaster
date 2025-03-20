@@ -1,33 +1,33 @@
 import Foundation
 import Combine
+import CoreData
+import UIKit
 
 // MARK: - データサービスのプロトコル
 protocol DataServiceProtocol {
+    // CoreData
+    var viewContext: NSManagedObjectContext { get }
+    func saveContext()
+    
     // 変更通知のためのパブリッシャー
-    var objectWillChange: PassthroughSubject<Void, Never> { get }
+    var objectWillChange: ObservableObjectPublisher { get }
     
     // タスク関連
     func fetchTasks() -> [Task]
     func getTask(by id: UUID) -> Task?
-    func saveTasks(_ tasks: [Task])
-    func addTask(_ task: Task)
-    func updateTask(_ task: Task)
+    func saveTask(_ task: Task)
     func deleteTask(id: UUID)
     
     // プロジェクト関連
     func fetchProjects() -> [Project]
     func getProject(by id: UUID) -> Project?
-    func saveProjects(_ projects: [Project])
-    func addProject(_ project: Project)
-    func updateProject(_ project: Project)
+    func saveProject(_ project: Project)
     func deleteProject(id: UUID)
     
     // タグ関連
     func fetchTags() -> [Tag]
     func getTag(by id: UUID) -> Tag?
-    func saveTags(_ tags: [Tag])
-    func addTag(_ tag: Tag)
-    func updateTag(_ tag: Tag)
+    func saveTag(_ tag: Tag)
     func deleteTag(id: UUID)
 }
 
@@ -36,292 +36,306 @@ class DataService: DataServiceProtocol {
     // シングルトンインスタンス
     static let shared = DataService()
     
-    // UserDefaultsのキー
-    private enum Keys {
-        static let tasks = "tasks"
-        static let projects = "projects"
-        static let tags = "tags"
-    }
+    // CoreDataコンテキスト
+    let viewContext: NSManagedObjectContext
     
     // イベント通知用のパブリッシャー
-    let objectWillChange = PassthroughSubject<Void, Never>()
-    
-    // 内部データ
-    private var cachedTasks: [Task] = []
-    private var cachedProjects: [Project] = []
-    private var cachedTags: [Tag] = []
+    let objectWillChange = ObservableObjectPublisher()
     
     // 初期化
     private init() {
-        loadFromUserDefaults()
+        let container = (UIApplication.shared.delegate as! AppDelegate).persistentContainer
+        viewContext = container.viewContext
         
         // サンプルデータがなければ追加
-        if cachedTasks.isEmpty {
-            cachedTasks = Task.samples
-        }
-        
-        if cachedProjects.isEmpty {
-            cachedProjects = Project.samples
-        }
-        
-        if cachedTags.isEmpty {
-            cachedTags = Tag.samples
-        }
+        checkAndCreateSampleData()
     }
     
-    // UserDefaultsからデータを読み込む
-    private func loadFromUserDefaults() {
-        if let data = UserDefaults.standard.data(forKey: Keys.tasks) {
+    // コンテキストの保存
+    func saveContext() {
+        if viewContext.hasChanges {
             do {
-                cachedTasks = try JSONDecoder().decode([Task].self, from: data)
+                try viewContext.save()
+                objectWillChange.send()
             } catch {
-                print("タスクのデコードに失敗: \(error)")
-            }
-        }
-        
-        if let data = UserDefaults.standard.data(forKey: Keys.projects) {
-            do {
-                cachedProjects = try JSONDecoder().decode([Project].self, from: data)
-            } catch {
-                print("プロジェクトのデコードに失敗: \(error)")
-            }
-        }
-        
-        if let data = UserDefaults.standard.data(forKey: Keys.tags) {
-            do {
-                cachedTags = try JSONDecoder().decode([Tag].self, from: data)
-            } catch {
-                print("タグのデコードに失敗: \(error)")
+                print("コンテキストの保存に失敗: \(error)")
             }
         }
     }
     
-    // UserDefaultsにデータを保存する
-    private func saveToUserDefaults() {
+    // サンプルデータの確認と作成
+    private func checkAndCreateSampleData() {
+        let taskFetch = NSFetchRequest<Task>(entityName: "Task")
+        let projectFetch = NSFetchRequest<Project>(entityName: "Project")
+        let tagFetch = NSFetchRequest<Tag>(entityName: "Tag")
+        
         do {
-            let tasksData = try JSONEncoder().encode(cachedTasks)
-            UserDefaults.standard.set(tasksData, forKey: Keys.tasks)
+            let taskCount = try viewContext.count(for: taskFetch)
+            let projectCount = try viewContext.count(for: projectFetch)
+            let tagCount = try viewContext.count(for: tagFetch)
             
-            let projectsData = try JSONEncoder().encode(cachedProjects)
-            UserDefaults.standard.set(projectsData, forKey: Keys.projects)
-            
-            let tagsData = try JSONEncoder().encode(cachedTags)
-            UserDefaults.standard.set(tagsData, forKey: Keys.tags)
+            if taskCount == 0 && projectCount == 0 && tagCount == 0 {
+                createSampleData()
+            }
         } catch {
-            print("データのエンコードに失敗: \(error)")
+            print("サンプルデータの確認に失敗: \(error)")
         }
     }
     
-    // 変更を通知する
-    private func notifyChange() {
-        objectWillChange.send()
+    // サンプルデータの作成
+    private func createSampleData() {
+        // サンプルタグの作成
+        let tags = [
+            createTag(name: "仕事", colorHex: "#5AC8FA"),
+            createTag(name: "個人", colorHex: "#FF9500"),
+            createTag(name: "緊急", colorHex: "#FF3B30"),
+            createTag(name: "会議", colorHex: "#34C759"),
+            createTag(name: "アイデア", colorHex: "#007AFF")
+        ]
+        
+        // サンプルプロジェクトの作成
+        let projects = [
+            createProject(
+                name: "アプリ開発",
+                description: "新規iOSアプリのリリース準備",
+                colorHex: "#4A90E2"
+            ),
+            createProject(
+                name: "マーケティングキャンペーン",
+                description: "第2四半期の販促キャンペーン計画と実行",
+                colorHex: "#50C356",
+                dueDate: Calendar.current.date(byAdding: .month, value: 1, to: Date())
+            ),
+            createProject(
+                name: "ウェブサイトリニューアル",
+                description: "企業ウェブサイトのデザイン刷新とコンテンツ更新",
+                colorHex: "#E2A64A"
+            )
+        ]
+        
+        // サンプルタスクの作成
+        let _ = [
+            createTask(
+                title: "プロジェクト提案書の作成",
+                description: "クライアントXYZ向けの新規プロジェクト提案書を作成する",
+                dueDate: Calendar.current.date(byAdding: .day, value: 2, to: Date()),
+                priority: 3,
+                status: "進行中",
+                project: projects[0],
+                tags: [tags[0], tags[2]]
+            ),
+            createTask(
+                title: "週次ミーティングの準備",
+                dueDate: Calendar.current.date(byAdding: .day, value: 1, to: Date()),
+                priority: 2,
+                status: "未着手",
+                isRepeating: true,
+                repeatType: "毎週",
+                project: projects[0],
+                tags: [tags[0], tags[3]]
+            ),
+            createTask(
+                title: "メールの返信",
+                description: "取引先からの問い合わせに返信する",
+                dueDate: Date(),
+                priority: 1,
+                status: "未着手",
+                project: nil,
+                tags: [tags[0]]
+            ),
+            createTask(
+                title: "アプリのバグ修正",
+                description: "ログイン画面のクラッシュ問題を修正",
+                dueDate: Calendar.current.date(byAdding: .day, value: -1, to: Date()),
+                priority: 3,
+                status: "完了",
+                completionDate: Date(),
+                project: projects[0],
+                tags: [tags[0], tags[2]]
+            ),
+            createTask(
+                title: "買い物リスト作成",
+                priority: 1,
+                status: "未着手",
+                project: nil,
+                tags: [tags[1]]
+            )
+        ]
+        
+        saveContext()
+    }
+    
+    // タグの新規作成
+    private func createTag(name: String, colorHex: String) -> Tag {
+        let tag = Tag(context: viewContext)
+        tag.id = UUID()
+        tag.name = name
+        tag.colorHex = colorHex
+        tag.creationDate = Date()
+        return tag
+    }
+    
+    // プロジェクトの新規作成
+    private func createProject(name: String, description: String? = nil, colorHex: String, dueDate: Date? = nil) -> Project {
+        let project = Project(context: viewContext)
+        project.id = UUID()
+        project.name = name
+        project.projectDescription = description
+        project.colorHex = colorHex
+        project.creationDate = Date()
+        project.dueDate = dueDate
+        return project
+    }
+    
+    // タスクの新規作成
+    private func createTask(
+        title: String,
+        description: String? = nil,
+        dueDate: Date? = nil,
+        priority: Int16 = 2,
+        status: String = "未着手",
+        completionDate: Date? = nil,
+        isRepeating: Bool = false,
+        repeatType: String = "なし",
+        project: Project? = nil,
+        tags: [Tag] = []
+    ) -> Task {
+        let task = Task(context: viewContext)
+        task.id = UUID()
+        task.title = title
+        task.taskDescription = description
+        task.creationDate = Date()
+        task.dueDate = dueDate
+        task.priority = priority
+        task.status = status
+        task.completionDate = completionDate
+        task.isRepeating = isRepeating
+        task.repeatType = repeatType
+        
+        // プロジェクト関連付け
+        if let project = project {
+            task.project = project
+        }
+        
+        // タグ関連付け
+        for tag in tags {
+            task.addToTags(tag)
+        }
+        
+        return task
     }
     
     // MARK: - タスクのCRUD
     func fetchTasks() -> [Task] {
-        return cachedTasks
+        let request = NSFetchRequest<Task>(entityName: "Task")
+        request.sortDescriptors = [NSSortDescriptor(keyPath: \Task.creationDate, ascending: false)]
+        
+        do {
+            return try viewContext.fetch(request)
+        } catch {
+            print("タスクの取得に失敗: \(error)")
+            return []
+        }
     }
     
     func getTask(by id: UUID) -> Task? {
-        return cachedTasks.first { $0.id == id }
+        let request = NSFetchRequest<Task>(entityName: "Task")
+        request.predicate = NSPredicate(format: "id == %@", id as CVarArg)
+        request.fetchLimit = 1
+        
+        do {
+            let tasks = try viewContext.fetch(request)
+            return tasks.first
+        } catch {
+            print("タスクの取得に失敗: \(error)")
+            return nil
+        }
     }
     
-    func saveTasks(_ tasks: [Task]) {
-        cachedTasks = tasks
-        saveToUserDefaults()
-        notifyChange()
-    }
-    
-    func addTask(_ task: Task) {
-        cachedTasks.append(task)
-        
-        // プロジェクトに関連付ける場合
-        if let projectId = task.projectId,
-           let index = cachedProjects.firstIndex(where: { $0.id == projectId }) {
-            cachedProjects[index].taskIds.append(task.id)
-        }
-        
-        // タグに関連付ける
-        for tagId in task.tagIds {
-            if let index = cachedTags.firstIndex(where: { $0.id == tagId }) {
-                cachedTags[index].taskIds.append(task.id)
-            }
-        }
-        
-        saveToUserDefaults()
-        notifyChange()
-    }
-    
-    func updateTask(_ task: Task) {
-        if let index = cachedTasks.firstIndex(where: { $0.id == task.id }) {
-            // 古いタスクを取得
-            let oldTask = cachedTasks[index]
-            
-            // プロジェクトの関連付けが変更された場合
-            if oldTask.projectId != task.projectId {
-                // 古いプロジェクトからタスクIDを削除
-                if let oldProjectId = oldTask.projectId,
-                   let projectIndex = cachedProjects.firstIndex(where: { $0.id == oldProjectId }) {
-                    cachedProjects[projectIndex].taskIds.removeAll(where: { $0 == task.id })
-                }
-                
-                // 新しいプロジェクトにタスクIDを追加
-                if let newProjectId = task.projectId,
-                   let projectIndex = cachedProjects.firstIndex(where: { $0.id == newProjectId }) {
-                    cachedProjects[projectIndex].taskIds.append(task.id)
-                }
-            }
-            
-            // タグの関連付けが変更された場合
-            let oldTagIds = Set(oldTask.tagIds)
-            let newTagIds = Set(task.tagIds)
-            
-            // 削除されたタグからタスクIDを削除
-            let removedTags = oldTagIds.subtracting(newTagIds)
-            for tagId in removedTags {
-                if let tagIndex = cachedTags.firstIndex(where: { $0.id == tagId }) {
-                    cachedTags[tagIndex].taskIds.removeAll(where: { $0 == task.id })
-                }
-            }
-            
-            // 追加されたタグにタスクIDを追加
-            let addedTags = newTagIds.subtracting(oldTagIds)
-            for tagId in addedTags {
-                if let tagIndex = cachedTags.firstIndex(where: { $0.id == tagId }) {
-                    cachedTags[tagIndex].taskIds.append(task.id)
-                }
-            }
-            
-            // タスクを更新
-            cachedTasks[index] = task
-            
-            saveToUserDefaults()
-            notifyChange()
-        }
+    func saveTask(_ task: Task) {
+        saveContext()
     }
     
     func deleteTask(id: UUID) {
-        if let index = cachedTasks.firstIndex(where: { $0.id == id }) {
-            let task = cachedTasks[index]
-            
-            // プロジェクトからタスクIDを削除
-            if let projectId = task.projectId,
-               let projectIndex = cachedProjects.firstIndex(where: { $0.id == projectId }) {
-                cachedProjects[projectIndex].taskIds.removeAll(where: { $0 == id })
-            }
-            
-            // タグからタスクIDを削除
-            for tagId in task.tagIds {
-                if let tagIndex = cachedTags.firstIndex(where: { $0.id == tagId }) {
-                    cachedTags[tagIndex].taskIds.removeAll(where: { $0 == id })
-                }
-            }
-            
-            // タスクを削除
-            cachedTasks.remove(at: index)
-            
-            saveToUserDefaults()
-            notifyChange()
+        if let task = getTask(by: id) {
+            viewContext.delete(task)
+            saveContext()
         }
     }
     
     // MARK: - プロジェクトのCRUD
     func fetchProjects() -> [Project] {
-        return cachedProjects
-    }
-    
-    func getProject(by id: UUID) -> Project? {
-        return cachedProjects.first { $0.id == id }
-    }
-    
-    func saveProjects(_ projects: [Project]) {
-        cachedProjects = projects
-        saveToUserDefaults()
-        notifyChange()
-    }
-    
-    func addProject(_ project: Project) {
-        cachedProjects.append(project)
-        saveToUserDefaults()
-        notifyChange()
-    }
-    
-    func updateProject(_ project: Project) {
-        if let index = cachedProjects.firstIndex(where: { $0.id == project.id }) {
-            cachedProjects[index] = project
-            saveToUserDefaults()
-            notifyChange()
+        let request = NSFetchRequest<Project>(entityName: "Project")
+        request.sortDescriptors = [NSSortDescriptor(keyPath: \Project.name, ascending: true)]
+        
+        do {
+            return try viewContext.fetch(request)
+        } catch {
+            print("プロジェクトの取得に失敗: \(error)")
+            return []
         }
     }
     
+    func getProject(by id: UUID) -> Project? {
+        let request = NSFetchRequest<Project>(entityName: "Project")
+        request.predicate = NSPredicate(format: "id == %@", id as CVarArg)
+        request.fetchLimit = 1
+        
+        do {
+            let projects = try viewContext.fetch(request)
+            return projects.first
+        } catch {
+            print("プロジェクトの取得に失敗: \(error)")
+            return nil
+        }
+    }
+    
+    func saveProject(_ project: Project) {
+        saveContext()
+    }
+    
     func deleteProject(id: UUID) {
-        if let index = cachedProjects.firstIndex(where: { $0.id == id }) {
-            let project = cachedProjects[index]
-            
-            // 関連するタスクを更新（プロジェクトの関連付けを解除）
-            for taskId in project.taskIds {
-                if let taskIndex = cachedTasks.firstIndex(where: { $0.id == taskId }) {
-                    var updatedTask = cachedTasks[taskIndex]
-                    updatedTask.projectId = nil
-                    cachedTasks[taskIndex] = updatedTask
-                }
-            }
-            
-            // プロジェクトを削除
-            cachedProjects.remove(at: index)
-            
-            saveToUserDefaults()
-            notifyChange()
+        if let project = getProject(by: id) {
+            viewContext.delete(project)
+            saveContext()
         }
     }
     
     // MARK: - タグのCRUD
     func fetchTags() -> [Tag] {
-        return cachedTags
-    }
-    
-    func getTag(by id: UUID) -> Tag? {
-        return cachedTags.first { $0.id == id }
-    }
-    
-    func saveTags(_ tags: [Tag]) {
-        cachedTags = tags
-        saveToUserDefaults()
-        notifyChange()
-    }
-    
-    func addTag(_ tag: Tag) {
-        cachedTags.append(tag)
-        saveToUserDefaults()
-        notifyChange()
-    }
-    
-    func updateTag(_ tag: Tag) {
-        if let index = cachedTags.firstIndex(where: { $0.id == tag.id }) {
-            cachedTags[index] = tag
-            saveToUserDefaults()
-            notifyChange()
+        let request = NSFetchRequest<Tag>(entityName: "Tag")
+        request.sortDescriptors = [NSSortDescriptor(keyPath: \Tag.name, ascending: true)]
+        
+        do {
+            return try viewContext.fetch(request)
+        } catch {
+            print("タグの取得に失敗: \(error)")
+            return []
         }
     }
     
+    func getTag(by id: UUID) -> Tag? {
+        let request = NSFetchRequest<Tag>(entityName: "Tag")
+        request.predicate = NSPredicate(format: "id == %@", id as CVarArg)
+        request.fetchLimit = 1
+        
+        do {
+            let tags = try viewContext.fetch(request)
+            return tags.first
+        } catch {
+            print("タグの取得に失敗: \(error)")
+            return nil
+        }
+    }
+    
+    func saveTag(_ tag: Tag) {
+        saveContext()
+    }
+    
     func deleteTag(id: UUID) {
-        if let index = cachedTags.firstIndex(where: { $0.id == id }) {
-            let tag = cachedTags[index]
-            
-            // 関連するタスクを更新（タグの関連付けを解除）
-            for taskId in tag.taskIds {
-                if let taskIndex = cachedTasks.firstIndex(where: { $0.id == taskId }) {
-                    var updatedTask = cachedTasks[taskIndex]
-                    updatedTask.tagIds.removeAll(where: { $0 == id })
-                    cachedTasks[taskIndex] = updatedTask
-                }
-            }
-            
-            // タグを削除
-            cachedTags.remove(at: index)
-            
-            saveToUserDefaults()
-            notifyChange()
+        if let tag = getTag(by: id) {
+            viewContext.delete(tag)
+            saveContext()
         }
     }
 }
