@@ -81,7 +81,7 @@ struct CalendarView: View {
                 VStack {
                     DatePicker("", selection: Binding(
                         get: { calendarViewModel.currentDate },
-                        set: { 
+                        set: {
                             calendarViewModel.currentDate = $0
                             // iOS 17以降のonChangeに対応
                             currentMonth = Calendar.current.component(.month, from: $0)
@@ -268,49 +268,59 @@ struct CalendarView: View {
             let tasksForSelectedDate = events.filter { $0.type == .task }
             
             if tasksForSelectedDate.isEmpty {
-                VStack {
-                    Text("タスクがありません")
-                        .font(Font.system(size: DesignSystem.Typography.body))
-                        .foregroundColor(DesignSystem.Colors.textSecondary)
-                        .padding()
-                    
-                    Button(action: {
-                        showingNewTaskSheet = true
-                    }) {
-                        Text("タスクを追加")
-                            .font(Font.system(size: DesignSystem.Typography.callout, weight: .medium))
-                            .foregroundColor(DesignSystem.Colors.primary)
-                            .padding()
-                            .overlay(
-                                RoundedRectangle(cornerRadius: DesignSystem.CornerRadius.small)
-                                    .stroke(DesignSystem.Colors.primary, lineWidth: 1)
-                            )
-                    }
-                }
-                .frame(maxWidth: .infinity)
-                .padding()
+                noTasksView
             } else {
-                ScrollView {
-                    VStack(spacing: DesignSystem.Spacing.s) {
-                        ForEach(tasksForSelectedDate) { event in
-                            if let tmTask = taskViewModel.tasks.first(where: { $0.id == event.id }) {
-                                let task = convertToTask(tmTask)
-                                NavigationLink(destination: TaskDetailView(taskId: task.id)) {
-                                    TaskRowView(task: task)
-                                }
-                                .buttonStyle(PlainButtonStyle())
-                                .background(DesignSystem.Colors.card)
-                                .cornerRadius(DesignSystem.CornerRadius.medium)
-                                .padding(.horizontal)
-                            }
-                        }
-                    }
-                    .padding(.bottom)
-                }
+                tasksListView(tasksForSelectedDate)
             }
         }
         .frame(maxHeight: .infinity, alignment: .top)
         .background(DesignSystem.Colors.background)
+    }
+    
+    // タスクが無い場合の表示
+    private var noTasksView: some View {
+        VStack {
+            Text("タスクがありません")
+                .font(Font.system(size: DesignSystem.Typography.body))
+                .foregroundColor(DesignSystem.Colors.textSecondary)
+                .padding()
+            
+            Button(action: {
+                showingNewTaskSheet = true
+            }) {
+                Text("タスクを追加")
+                    .font(Font.system(size: DesignSystem.Typography.callout, weight: .medium))
+                    .foregroundColor(DesignSystem.Colors.primary)
+                    .padding()
+                    .overlay(
+                        RoundedRectangle(cornerRadius: DesignSystem.CornerRadius.small)
+                            .stroke(DesignSystem.Colors.primary, lineWidth: 1)
+                    )
+            }
+        }
+        .frame(maxWidth: .infinity)
+        .padding()
+    }
+    
+    // タスクリスト表示
+    private func tasksListView(_ tasks: [CalendarEvent]) -> some View {
+        ScrollView {
+            VStack(spacing: DesignSystem.Spacing.s) {
+                ForEach(tasks) { event in
+                    if let tmTask = taskViewModel.tasks.first(where: { $0.id == event.id }) {
+                        let task = convertToTask(tmTask)
+                        NavigationLink(destination: TaskDetailView(taskId: task.id)) {
+                            TaskRowView(task: task)
+                        }
+                        .buttonStyle(PlainButtonStyle())
+                        .background(DesignSystem.Colors.card)
+                        .cornerRadius(DesignSystem.CornerRadius.medium)
+                        .padding(.horizontal)
+                    }
+                }
+            }
+            .padding(.bottom)
+        }
     }
     
     // Helper: TMTaskをTaskに変換する関数
