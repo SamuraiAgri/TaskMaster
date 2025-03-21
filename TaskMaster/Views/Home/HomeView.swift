@@ -391,9 +391,12 @@ struct ProjectCardView: View {
     }
     
     // TMProjectからProjectを取得するヘルパーメソッド
+    // TMProjectからProjectを取得するヘルパーメソッド
     private func getProjectFromTMProject(_ tmProject: TMProject) -> Project {
-        if let existingProject = projectViewModel.getProject(by: tmProject.id) {
-            return existingProject
+        // ProjectViewModel.getProject はTMProjectを返すため、直接使わない
+        // 代わりにDataServiceを使って直接CoreDataのProjectエンティティを取得
+        if let coreDataProject = DataService.shared.getProject(by: tmProject.id) {
+            return coreDataProject
         } else {
             // 実際のプロジェクトが見つからない場合のフォールバック
             // 注：この部分は本来はVMで処理すべきでプロジェクト全体のリファクタリングが理想
