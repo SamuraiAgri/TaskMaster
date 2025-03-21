@@ -175,9 +175,9 @@ struct ProjectCreationView: View {
             }
             
             // ランダムカラーオプション
-            Button(action: {
+            Button {
                 colorHex = projectViewModel.randomColor()
-            }) {
+            } label: {
                 ZStack {
                     Circle()
                         .fill(Color.gray.opacity(0.2))
@@ -212,7 +212,7 @@ struct ProjectCreationView: View {
         }
         
         // プロジェクトの作成
-        var project = Project(
+        var project = TMProject(
             name: name,
             description: description.isEmpty ? nil : description,
             colorHex: colorHex

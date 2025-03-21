@@ -1,7 +1,7 @@
 import SwiftUI
 
 struct TodayTasksView: View {
-    var tasks: [Task]
+    var tasks: [TMTask]
     @EnvironmentObject var taskViewModel: TaskViewModel
     
     var body: some View {
@@ -33,15 +33,15 @@ struct TodayTasksView: View {
 }
 
 struct TodayTaskRowView: View {
-    @State var task: Task
+    @State var task: TMTask
     @EnvironmentObject var taskViewModel: TaskViewModel
     @EnvironmentObject var projectViewModel: ProjectViewModel
     @EnvironmentObject var tagViewModel: TagViewModel
     @State private var isCompleted: Bool
     
-    init(task: Task) {
+    init(task: TMTask) {
         self._task = State(initialValue: task)
-        self._isCompleted = State(initialValue: task.isCompleted)
+        self._isCompleted = State(initialValue: task.status == .completed)
     }
     
     var body: some View {
@@ -122,7 +122,7 @@ struct TodayTaskRowView: View {
 // プレビュー
 struct TodayTasksView_Previews: PreviewProvider {
     static var previews: some View {
-        TodayTasksView(tasks: Task.samples)
+        TodayTasksView(tasks: TMTask.samples)
             .environmentObject(TaskViewModel())
             .environmentObject(ProjectViewModel())
             .environmentObject(TagViewModel())

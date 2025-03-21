@@ -1,7 +1,7 @@
 import SwiftUI
 
 struct PriorityTasksView: View {
-    var tasks: [Task]
+    var tasks: [TMTask]
     @EnvironmentObject var taskViewModel: TaskViewModel
     
     var body: some View {
@@ -33,14 +33,14 @@ struct PriorityTasksView: View {
 }
 
 struct PriorityTaskRowView: View {
-    @State var task: Task
+    @State var task: TMTask
     @EnvironmentObject var taskViewModel: TaskViewModel
     @EnvironmentObject var projectViewModel: ProjectViewModel
     @State private var isCompleted: Bool
     
-    init(task: Task) {
+    init(task: TMTask) {
         self._task = State(initialValue: task)
-        self._isCompleted = State(initialValue: task.isCompleted)
+        self._isCompleted = State(initialValue: task.status == .completed)
     }
     
     var body: some View {
@@ -113,7 +113,7 @@ struct PriorityTaskRowView: View {
 // プレビュー
 struct PriorityTasksView_Previews: PreviewProvider {
     static var previews: some View {
-        PriorityTasksView(tasks: Task.samples.filter { $0.priority == .high })
+        PriorityTasksView(tasks: TMTask.samples.filter { $0.priority == .high })
             .environmentObject(TaskViewModel())
             .environmentObject(ProjectViewModel())
             .padding()
