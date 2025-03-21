@@ -65,6 +65,9 @@ struct HomeView: View {
         }
     }
     
+    // この関数は不要になったため削除
+
+    
     // 上部のサマリーカード
     private var summaryCard: some View {
         VStack(spacing: DesignSystem.Spacing.m) {
@@ -121,7 +124,7 @@ struct HomeView: View {
         .padding()
         .background(DesignSystem.Colors.card)
         .cornerRadius(DesignSystem.CornerRadius.large)
-        .withShadow(DesignSystem.Shadow.medium)
+        .shadow(color: Color.black.opacity(0.1), radius: 8, x: 0, y: 4)
     }
     
     // 週間タスク完了グラフ
@@ -185,8 +188,8 @@ struct HomeView: View {
             
             ScrollView(.horizontal, showsIndicators: false) {
                 HStack(spacing: DesignSystem.Spacing.m) {
-                    ForEach(homeViewModel.activeProjects.prefix(5)) { project in
-                        ProjectCardView(project: project)
+                    ForEach(homeViewModel.activeProjects.prefix(5)) { tmProject in
+                        ProjectCardView(project: tmProject)
                             .frame(width: 180, height: 140)
                     }
                 }
@@ -213,8 +216,8 @@ struct HomeView: View {
             }
             
             VStack(spacing: DesignSystem.Spacing.s) {
-                ForEach(homeViewModel.upcomingTasks.prefix(5)) { task in
-                    TaskRowView(task: task)
+                                    ForEach(homeViewModel.upcomingTasks.prefix(5)) { tmTask in
+                    TaskRowView(task: tmTask)
                 }
             }
         }
@@ -251,12 +254,12 @@ struct StatCard: View {
 
 // プロジェクトカード
 struct ProjectCardView: View {
-    var project: Project
+    var project: TMProject
     @EnvironmentObject var taskViewModel: TaskViewModel
     @EnvironmentObject var projectViewModel: ProjectViewModel
     
     var body: some View {
-        NavigationLink(destination: ProjectDetailView(project: project)) {
+        NavigationLink(destination: ProjectDetailView(projectId: project.id)) {
             VStack(alignment: .leading, spacing: DesignSystem.Spacing.s) {
                 // プロジェクト名
                 Text(project.name)
@@ -297,7 +300,7 @@ struct ProjectCardView: View {
             .padding()
             .background(DesignSystem.Colors.card)
             .cornerRadius(DesignSystem.CornerRadius.medium)
-            .withShadow(DesignSystem.Shadow.small)
+            .shadow(color: Color.black.opacity(0.1), radius: 4, x: 0, y: 2)
             .overlay(
                 RoundedRectangle(cornerRadius: DesignSystem.CornerRadius.medium)
                     .stroke(project.color, lineWidth: 2)

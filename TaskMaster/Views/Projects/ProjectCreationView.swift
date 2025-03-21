@@ -49,7 +49,7 @@ struct ProjectCreationView: View {
                                 RoundedRectangle(cornerRadius: DesignSystem.CornerRadius.medium)
                                     .stroke(nameError != nil ? DesignSystem.Colors.error : Color.clear, lineWidth: 1)
                             )
-                            .onChange(of: name) { newValue in
+                            .onChange(of: name) { _, _ in
                                 validateName()
                             }
                         
