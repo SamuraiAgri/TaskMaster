@@ -2,11 +2,11 @@ import SwiftUI
 
 struct TaskDetailView: View {
     var taskId: UUID
-    @State private var task: Task?
+    @State private var tmTask: TMTask?
     @State private var isEditing = false
     @State private var showingDeleteAlert = false
-    @State private var tags: [Tag] = []
-    @State private var project: Project?
+    @State private var tags: [TMTag] = []
+    @State private var project: TMProject?
     
     @EnvironmentObject var taskViewModel: TaskViewModel
     @EnvironmentObject var projectViewModel: ProjectViewModel
@@ -17,7 +17,7 @@ struct TaskDetailView: View {
     
     var body: some View {
         ScrollView {
-            if let task = task {
+            if let task = tmTask {
                 VStack(alignment: .leading, spacing: DesignSystem.Spacing.l) {
                     // ヘッダー情報
                     taskHeader(task: task)
@@ -54,11 +54,11 @@ struct TaskDetailView: View {
                 .padding()
             }
         }
-        .navigationTitle(task?.title ?? "タスク詳細")
+        .navigationTitle(tmTask?.title ?? "タスク詳細")
         .navigationBarTitleDisplayMode(.inline)
         .navigationBarItems(
             trailing: HStack {
-                if let task = task {
+                if tmTask != nil {
                     Button(action: {
                         isEditing = true
                     }) {
@@ -75,16 +75,10 @@ struct TaskDetailView: View {
             }
         )
         .sheet(isPresented: $isEditing) {
-            if let task = task {
-                NavigationView {
-                    TaskEditView(task: task) { updatedTask in
-                        self.task = updatedTask
-                        loadTaskDetails()
-                    }
-                    .navigationTitle("タスクの編集")
-                    .navigationBarItems(trailing: Button("完了") {
-                        isEditing = false
-                    })
+            if let task = tmTask {
+                TaskEditView(task: task) { updatedTask in
+                    self.tmTask = updatedTask
+                    loadTaskDetails()
                 }
             }
         }
@@ -93,7 +87,7 @@ struct TaskDetailView: View {
                 title: Text("タスクの削除"),
                 message: Text("本当にこのタスクを削除しますか？この操作は元に戻せません。"),
                 primaryButton: .destructive(Text("削除")) {
-                    if let task = task {
+                    if let task = tmTask {
                         taskViewModel.deleteTask(id: task.id)
                         presentationMode.wrappedValue.dismiss()
                     }
@@ -109,9 +103,9 @@ struct TaskDetailView: View {
     
     // タスクとその関連情報を読み込む
     private func loadTaskDetails() {
-        task = taskViewModel.getTask(by: taskId)
+        tmTask = taskViewModel.getTask(by: taskId)
         
-        if let task = task {
+        if let task = tmTask {
             // プロジェクト情報を取得
             if let projectId = task.projectId {
                 project = projectViewModel.getProject(by: projectId)
@@ -125,7 +119,7 @@ struct TaskDetailView: View {
     }
     
     // タスクヘッダー
-    private func taskHeader(task: Task) -> some View {
+    private func taskHeader(task: TMTask) -> some View {
         VStack(alignment: .leading, spacing: DesignSystem.Spacing.m) {
             HStack {
                 // ステータス表示
@@ -173,11 +167,10 @@ struct TaskDetailView: View {
             
             // 完了ボタン
             Button(action: {
-                var updatedTask = task
-                taskViewModel.toggleTaskCompletion(updatedTask)
+                taskViewModel.toggleTaskCompletion(task)
                 
                 // State更新
-                self.task = taskViewModel.getTask(by: taskId)
+                loadTaskDetails()
             }) {
                 HStack {
                     Image(systemName: task.isCompleted ? "checkmark.circle.fill" : "circle")
@@ -193,7 +186,7 @@ struct TaskDetailView: View {
     }
     
     // タスク詳細
-    private func taskDetails(task: Task) -> some View {
+    private func taskDetails(task: TMTask) -> some View {
         VStack(alignment: .leading, spacing: DesignSystem.Spacing.m) {
             // セクションタイトル
             Text("詳細")
@@ -234,13 +227,13 @@ struct TaskDetailView: View {
     }
     
     // プロジェクトセクション
-    private func projectSection(project: Project) -> some View {
+    private func projectSection(project: TMProject) -> some View {
         VStack(alignment: .leading, spacing: DesignSystem.Spacing.m) {
             Text("プロジェクト")
                 .font(Font.system(size: DesignSystem.Typography.headline, weight: .semibold))
                 .foregroundColor(DesignSystem.Colors.textPrimary)
             
-            NavigationLink(destination: ProjectDetailView(project: project)) {
+            NavigationLink(destination: ProjectDetailView(project: getProjectFromTMProject(project))) {
                 HStack {
                     Circle()
                         .fill(project.color)
@@ -263,8 +256,26 @@ struct TaskDetailView: View {
         }
     }
     
+    // TMProjectからProjectに変換するヘルパーメソッド
+    private func getProjectFromTMProject(_ tmProject: TMProject) -> Project {
+        if let coreDataProject = DataService.shared.getProject(by: tmProject.id) {
+            return coreDataProject
+        } else {
+            // 実際のプロジェクトが見つからない場合のフォールバック
+            let newProject = Project(context: DataService.shared.viewContext)
+            newProject.id = tmProject.id
+            newProject.name = tmProject.name
+            newProject.projectDescription = tmProject.description
+            newProject.colorHex = tmProject.colorHex
+            newProject.creationDate = tmProject.creationDate
+            newProject.dueDate = tmProject.dueDate
+            newProject.completionDate = tmProject.completionDate
+            return newProject
+        }
+    }
+    
     // タグセクション
-    private func tagsSection(tags: [Tag]) -> some View {
+    private func tagsSection(tags: [TMTag]) -> some View {
         VStack(alignment: .leading, spacing: DesignSystem.Spacing.m) {
             Text("タグ")
                 .font(Font.system(size: DesignSystem.Typography.headline, weight: .semibold))
@@ -299,17 +310,87 @@ struct TaskDetailView: View {
     }
 }
 
-// TaskEditViewの仮のプレースホルダー（実際の実装はTaskCreationViewを元に作成する）
+// TaskEditView
 struct TaskEditView: View {
     @Environment(\.presentationMode) var presentationMode
-    @State var task: Task
-    var onSave: (Task) -> Void
+    var task: TMTask
+    var onSave: (TMTask) -> Void
+    
+    // 状態変数
+    @State private var title: String
+    @State private var description: String
+    @State private var priority: Priority
+    @State private var status: TaskStatus
+    
+    init(task: TMTask, onSave: @escaping (TMTask) -> Void) {
+        self.task = task
+        self.onSave = onSave
+        
+        // 状態変数の初期化
+        self._title = State(initialValue: task.title)
+        self._description = State(initialValue: task.description ?? "")
+        self._priority = State(initialValue: task.priority)
+        self._status = State(initialValue: task.status)
+    }
     
     var body: some View {
-        Text("タスク編集画面はまだ実装されていません")
-            .onDisappear {
-                onSave(task)
+        ScrollView {
+            VStack(alignment: .leading, spacing: DesignSystem.Spacing.m) {
+                // タイトル
+                VStack(alignment: .leading, spacing: DesignSystem.Spacing.xs) {
+                    Text("タイトル")
+                        .font(DesignSystem.Typography.font(size: DesignSystem.Typography.subheadline))
+                        .foregroundColor(DesignSystem.Colors.textSecondary)
+                    
+                    TextField("タスクのタイトル", text: $title)
+                        .font(DesignSystem.Typography.font(size: DesignSystem.Typography.body))
+                        .padding()
+                        .background(DesignSystem.Colors.card)
+                        .cornerRadius(DesignSystem.CornerRadius.medium)
+                }
+                
+                // 説明
+                VStack(alignment: .leading, spacing: DesignSystem.Spacing.xs) {
+                    Text("説明")
+                        .font(DesignSystem.Typography.font(size: DesignSystem.Typography.subheadline))
+                        .foregroundColor(DesignSystem.Colors.textSecondary)
+                    
+                    TextEditor(text: $description)
+                        .frame(minHeight: 100)
+                        .padding()
+                        .background(DesignSystem.Colors.card)
+                        .cornerRadius(DesignSystem.CornerRadius.medium)
+                }
+                
+                // 保存ボタン
+                Button(action: saveTask) {
+                    Text("保存")
+                        .font(DesignSystem.Typography.font(size: DesignSystem.Typography.body, weight: .medium))
+                        .foregroundColor(.white)
+                        .frame(maxWidth: .infinity)
+                        .padding()
+                        .background(DesignSystem.Colors.primary)
+                        .cornerRadius(DesignSystem.CornerRadius.medium)
+                }
             }
+            .padding()
+        }
+        .navigationTitle("タスクの編集")
+        .navigationBarItems(trailing: Button("キャンセル") {
+            presentationMode.wrappedValue.dismiss()
+        })
+    }
+    
+    // タスクを保存
+    private func saveTask() {
+        var updatedTask = task
+        updatedTask.title = title
+        updatedTask.description = description.isEmpty ? nil : description
+        updatedTask.priority = priority
+        updatedTask.status = status
+        
+        onSave(updatedTask)
+        presentationMode.wrappedValue.dismiss()
     }
 }
 
@@ -317,7 +398,7 @@ struct TaskEditView: View {
 struct TaskDetailView_Previews: PreviewProvider {
     static var previews: some View {
         NavigationView {
-            TaskDetailView(taskId: Task.samples[0].id)
+            TaskDetailView(taskId: UUID())
                 .environmentObject(TaskViewModel())
                 .environmentObject(ProjectViewModel())
                 .environmentObject(TagViewModel())

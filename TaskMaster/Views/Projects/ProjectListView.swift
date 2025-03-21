@@ -137,8 +137,8 @@ struct ProjectListView: View {
             ScrollView {
                 LazyVStack(spacing: DesignSystem.Spacing.m) {
                     ForEach(projectViewModel.filteredProjects) { project in
-                        NavigationLink(destination: ProjectDetailView(project: project)) {
-                            ProjectCardItem(project: project)
+                        NavigationLink(destination: ProjectDetailView(project: getProjectFromTMProject(project))) {
+                            ProjectCardItem(tmProject: project)
                         }
                         .buttonStyle(PlainButtonStyle())
                     }
@@ -148,6 +148,24 @@ struct ProjectListView: View {
             .refreshable {
                 projectViewModel.loadProjects()
                 refreshTrigger.toggle()
+            }
+        }
+        
+        // TMProjectからProjectに変換するヘルパーメソッド
+        private func getProjectFromTMProject(_ tmProject: TMProject) -> Project {
+            if let coreDataProject = DataService.shared.getProject(by: tmProject.id) {
+                return coreDataProject
+            } else {
+                // 実際のプロジェクトが見つからない場合のフォールバック
+                let newProject = Project(context: DataService.shared.viewContext)
+                newProject.id = tmProject.id
+                newProject.name = tmProject.name
+                newProject.projectDescription = tmProject.description
+                newProject.colorHex = tmProject.colorHex
+                newProject.creationDate = tmProject.creationDate
+                newProject.dueDate = tmProject.dueDate
+                newProject.completionDate = tmProject.completionDate
+                return newProject
             }
         }
         
@@ -195,7 +213,7 @@ struct ProjectListView: View {
 
     // プロジェクトカードアイテム
     struct ProjectCardItem: View {
-        var project: Project
+        var tmProject: TMProject
         @EnvironmentObject var taskViewModel: TaskViewModel
         @EnvironmentObject var projectViewModel: ProjectViewModel
         
@@ -203,13 +221,13 @@ struct ProjectListView: View {
             VStack(alignment: .leading, spacing: DesignSystem.Spacing.s) {
                 // プロジェクト名とステータス
                 HStack {
-                    Text(project.name ?? "")
+                    Text(tmProject.name)
                         .font(DesignSystem.Typography.font(size: DesignSystem.Typography.headline, weight: .semibold))
                         .foregroundColor(DesignSystem.Colors.textPrimary)
                     
                     Spacer()
                     
-                    if project.completionDate != nil {
+                    if tmProject.completionDate != nil {
                         Text("完了")
                             .font(DesignSystem.Typography.font(size: DesignSystem.Typography.caption1))
                             .foregroundColor(.white)
@@ -221,7 +239,7 @@ struct ProjectListView: View {
                 }
                 
                 // 説明（あれば）
-                if let description = project.projectDescription, !description.isEmpty {
+                if let description = tmProject.description, !description.isEmpty {
                     Text(description)
                         .font(DesignSystem.Typography.font(size: DesignSystem.Typography.subheadline))
                         .foregroundColor(DesignSystem.Colors.textSecondary)
@@ -231,7 +249,7 @@ struct ProjectListView: View {
                 
                 // タスク数と期限
                 HStack {
-                    let taskCount = project.tasks?.count ?? 0
+                    let taskCount = tmProject.taskIds.count
                     Label {
                         Text("\(taskCount) タスク")
                             .font(DesignSystem.Typography.font(size: DesignSystem.Typography.footnote))
@@ -244,8 +262,8 @@ struct ProjectListView: View {
                     
                     Spacer()
                     
-                    if let dueDate = project.dueDate {
-                        let isOverdue = dueDate < Date() && project.completionDate == nil
+                    if let dueDate = tmProject.dueDate {
+                        let isOverdue = dueDate < Date() && tmProject.completionDate == nil
                         Label {
                             Text(dueDate.formatted(with: "yyyy/MM/dd"))
                                 .font(DesignSystem.Typography.font(size: DesignSystem.Typography.footnote))
@@ -259,8 +277,6 @@ struct ProjectListView: View {
                 }
                 
                 // 進捗バー
-                // ここでは直接ProjectをTMProjectに変換して使用
-                let tmProject = project.asTMProject
                 let progress = projectViewModel.calculateProgress(for: tmProject, tasks: taskViewModel.tasks)
                 HStack(spacing: DesignSystem.Spacing.s) {
                     ProgressBarView(value: progress, color: tmProject.color, height: 8)
@@ -277,7 +293,7 @@ struct ProjectListView: View {
             .shadow(color: Color.black.opacity(0.1), radius: 4, x: 0, y: 2)
             .overlay(
                 Rectangle()
-                    .fill(Color(hex: project.colorHex ?? "#4A90E2") ?? .blue)
+                    .fill(tmProject.color)
                     .frame(width: 4)
                     .cornerRadius(DesignSystem.CornerRadius.small, corners: [.topLeft, .bottomLeft]),
                 alignment: .leading
@@ -312,4 +328,3 @@ struct ProjectListView: View {
                 .environmentObject(TaskViewModel())
         }
     }
-
