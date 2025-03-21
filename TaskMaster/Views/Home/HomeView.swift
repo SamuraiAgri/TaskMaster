@@ -3,6 +3,7 @@ import SwiftUI
 struct HomeView: View {
     @EnvironmentObject var homeViewModel: HomeViewModel
     @EnvironmentObject var taskViewModel: TaskViewModel
+    @EnvironmentObject var projectViewModel: ProjectViewModel
     @State private var showingNewTaskSheet = false
     @State private var refreshTrigger = false
     
