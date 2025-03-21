@@ -15,17 +15,17 @@ struct HomeView: View {
                     
                     // 今日のタスク
                     if !homeViewModel.todayTasks.isEmpty {
-                        TodayTasksView(tasks: homeViewModel.todayTasks)
+                        todayTasksSection
                     }
                     
                     // 高優先度タスク
                     if !homeViewModel.priorityTasks.isEmpty {
-                        PriorityTasksView(tasks: homeViewModel.priorityTasks)
+                        priorityTasksSection
                     }
                     
                     // 期限切れタスク
                     if !homeViewModel.overdueTasks.isEmpty {
-                        OverdueTasksView(tasks: homeViewModel.overdueTasks)
+                        overdueTasksSection
                     }
                     
                     // 進行中のプロジェクト
@@ -65,8 +65,89 @@ struct HomeView: View {
         }
     }
     
-    // この関数は不要になったため削除
-
+    // 今日のタスクセクション
+    private var todayTasksSection: some View {
+        VStack(alignment: .leading, spacing: DesignSystem.Spacing.m) {
+            HStack {
+                Text("今日のタスク")
+                    .font(DesignSystem.Typography.font(size: DesignSystem.Typography.headline, weight: .semibold))
+                    .foregroundColor(DesignSystem.Colors.textPrimary)
+                
+                Spacer()
+                
+                NavigationLink(destination: TaskListView(initialFilter: .today)) {
+                    Text("すべて見る")
+                        .font(DesignSystem.Typography.font(size: DesignSystem.Typography.subheadline))
+                        .foregroundColor(DesignSystem.Colors.primary)
+                }
+            }
+            
+            VStack(spacing: DesignSystem.Spacing.s) {
+                ForEach(homeViewModel.todayTasks.prefix(3)) { tmTask in
+                    TodayTaskRowView(task: tmTask)
+                }
+            }
+        }
+        .padding()
+        .background(DesignSystem.Colors.card)
+        .cornerRadius(DesignSystem.CornerRadius.large)
+    }
+    
+    // 高優先度タスクセクション
+    private var priorityTasksSection: some View {
+        VStack(alignment: .leading, spacing: DesignSystem.Spacing.m) {
+            HStack {
+                Text("高優先度タスク")
+                    .font(DesignSystem.Typography.font(size: DesignSystem.Typography.headline, weight: .semibold))
+                    .foregroundColor(DesignSystem.Colors.textPrimary)
+                
+                Spacer()
+                
+                NavigationLink(destination: TaskListView(initialFilter: .highPriority)) {
+                    Text("すべて見る")
+                        .font(DesignSystem.Typography.font(size: DesignSystem.Typography.subheadline))
+                        .foregroundColor(DesignSystem.Colors.primary)
+                }
+            }
+            
+            VStack(spacing: DesignSystem.Spacing.s) {
+                ForEach(homeViewModel.priorityTasks.prefix(3)) { tmTask in
+                    PriorityTaskRowView(task: tmTask)
+                }
+            }
+        }
+        .padding()
+        .background(DesignSystem.Colors.card)
+        .cornerRadius(DesignSystem.CornerRadius.large)
+    }
+    
+    // 期限切れタスクセクション
+    private var overdueTasksSection: some View {
+        VStack(alignment: .leading, spacing: DesignSystem.Spacing.m) {
+            HStack {
+                Text("期限切れのタスク")
+                    .font(DesignSystem.Typography.font(size: DesignSystem.Typography.headline, weight: .semibold))
+                    .foregroundColor(DesignSystem.Colors.textPrimary)
+                
+                Spacer()
+                
+                NavigationLink(destination: TaskListView(initialFilter: .overdue)) {
+                    Text("すべて見る")
+                        .font(DesignSystem.Typography.font(size: DesignSystem.Typography.subheadline))
+                        .foregroundColor(DesignSystem.Colors.primary)
+                }
+            }
+            
+            VStack(spacing: DesignSystem.Spacing.s) {
+                ForEach(homeViewModel.overdueTasks.prefix(3)) { tmTask in
+                    TaskRowView(task: tmTask)
+                }
+            }
+        }
+        .padding()
+        .background(DesignSystem.Colors.card)
+        .cornerRadius(DesignSystem.CornerRadius.large)
+    }
     
     // 上部のサマリーカード
     private var summaryCard: some View {
@@ -216,7 +297,7 @@ struct HomeView: View {
             }
             
             VStack(spacing: DesignSystem.Spacing.s) {
-                                    ForEach(homeViewModel.upcomingTasks.prefix(5)) { tmTask in
+                ForEach(homeViewModel.upcomingTasks.prefix(5)) { tmTask in
                     TaskRowView(task: tmTask)
                 }
             }
@@ -259,7 +340,7 @@ struct ProjectCardView: View {
     @EnvironmentObject var projectViewModel: ProjectViewModel
     
     var body: some View {
-        NavigationLink(destination: ProjectDetailView(projectId: project.id)) {
+        NavigationLink(destination: ProjectDetailView(project: getProjectFromTMProject(project))) {
             VStack(alignment: .leading, spacing: DesignSystem.Spacing.s) {
                 // プロジェクト名
                 Text(project.name)
@@ -305,6 +386,25 @@ struct ProjectCardView: View {
                 RoundedRectangle(cornerRadius: DesignSystem.CornerRadius.medium)
                     .stroke(project.color, lineWidth: 2)
             )
+        }
+    }
+    
+    // TMProjectからProjectを取得するヘルパーメソッド
+    private func getProjectFromTMProject(_ tmProject: TMProject) -> Project {
+        if let existingProject = projectViewModel.getProject(by: tmProject.id) {
+            return existingProject
+        } else {
+            // 実際のプロジェクトが見つからない場合のフォールバック
+            // 注：この部分は本来はVMで処理すべきでプロジェクト全体のリファクタリングが理想
+            let newProject = Project(context: DataService.shared.viewContext)
+            newProject.id = tmProject.id
+            newProject.name = tmProject.name
+            newProject.projectDescription = tmProject.description
+            newProject.colorHex = tmProject.colorHex
+            newProject.creationDate = tmProject.creationDate
+            newProject.dueDate = tmProject.dueDate
+            newProject.completionDate = tmProject.completionDate
+            return newProject
         }
     }
 }
