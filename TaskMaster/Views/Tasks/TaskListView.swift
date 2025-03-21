@@ -165,9 +165,9 @@ struct TaskListView: View {
     // タスクリスト（タスクがある場合）
     private var taskListContent: some View {
         List {
-            ForEach(taskViewModel.filteredTasks) { task in
-                NavigationLink(destination: TaskDetailView(taskId: task.id)) {
-                    TaskRowView(task: task)
+            ForEach(taskViewModel.filteredTasks) { tmTask in
+                NavigationLink(destination: TaskDetailView(taskId: tmTask.id)) {
+                    TaskRowView(task: tmTask)
                 }
                 .listRowBackground(DesignSystem.Colors.card)
                 .listRowSeparator(.hidden)
@@ -240,15 +240,15 @@ struct TaskListView: View {
 
 // タスク行ビュー
 struct TaskRowView: View {
-    @State var task: Task
+    @State var task: TMTask
     @EnvironmentObject var taskViewModel: TaskViewModel
     @EnvironmentObject var projectViewModel: ProjectViewModel
     @EnvironmentObject var tagViewModel: TagViewModel
     @State private var isCompleted: Bool
     
-    init(task: Task) {
+    init(task: TMTask) {
         self._task = State(initialValue: task)
-        self._isCompleted = State(initialValue: task.isCompleted)
+        self._isCompleted = State(initialValue: task.status == .completed)
     }
     
     var body: some View {
