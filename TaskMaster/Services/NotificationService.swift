@@ -103,7 +103,7 @@ class NotificationService {
     func updateTaskReminder(for task: Task) {
         cancelTaskReminder(for: task)
         
-        if let reminderDate = task.reminderDate {
+        if task.reminderDate != nil {
             scheduleTaskReminder(for: task)
         }
     }

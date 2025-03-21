@@ -81,14 +81,15 @@ struct CalendarView: View {
                 VStack {
                     DatePicker("", selection: Binding(
                         get: { calendarViewModel.currentDate },
-                        set: { calendarViewModel.currentDate = $0 }
+                        set: { 
+                            calendarViewModel.currentDate = $0
+                            // iOS 17以降のonChangeに対応
+                            currentMonth = Calendar.current.component(.month, from: $0)
+                            currentYear = Calendar.current.component(.year, from: $0)
+                        }
                     ), displayedComponents: [.date])
                         .datePickerStyle(GraphicalDatePickerStyle())
                         .labelsHidden()
-                        .onChange(of: calendarViewModel.currentDate) { newValue in
-                            currentMonth = Calendar.current.component(.month, from: newValue)
-                            currentYear = Calendar.current.component(.year, from: newValue)
-                        }
                     
                     Button("完了") {
                         showingDatePicker = false
@@ -292,7 +293,8 @@ struct CalendarView: View {
                 ScrollView {
                     VStack(spacing: DesignSystem.Spacing.s) {
                         ForEach(tasksForSelectedDate) { event in
-                            if let task = taskViewModel.getTask(by: event.id) {
+                            if let tmTask = taskViewModel.tasks.first(where: { $0.id == event.id }) {
+                                let task = convertToTask(tmTask)
                                 NavigationLink(destination: TaskDetailView(taskId: task.id)) {
                                     TaskRowView(task: task)
                                 }
@@ -309,6 +311,25 @@ struct CalendarView: View {
         }
         .frame(maxHeight: .infinity, alignment: .top)
         .background(DesignSystem.Colors.background)
+    }
+    
+    // Helper: TMTaskをTaskに変換する関数
+    private func convertToTask(_ tmTask: TMTask) -> Task {
+        let task = Task(context: DataService.shared.viewContext)
+        task.id = tmTask.id
+        task.title = tmTask.title
+        task.taskDescription = tmTask.description
+        task.creationDate = tmTask.creationDate
+        task.dueDate = tmTask.dueDate
+        task.completionDate = tmTask.completionDate
+        task.priority = Int16(tmTask.priority.rawValue)
+        task.status = tmTask.status.rawValue
+        task.isRepeating = tmTask.isRepeating
+        task.repeatType = tmTask.repeatType.rawValue
+        task.reminderDate = tmTask.reminderDate
+        // 注意: この関数はViewContext内のエンティティを作成しますが、
+        // コンテキストには保存されていないため、純粋に表示用です
+        return task
     }
     
     // ヘルパーメソッド
