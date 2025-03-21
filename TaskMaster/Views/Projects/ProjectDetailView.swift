@@ -8,19 +8,30 @@ struct ProjectDetailView: View {
     
     // プロジェクト
     var project: Project
-    @State private var editedProject: Project
+    @State private var tmProject: TMProject
     @State private var isEditing = false
     @State private var showingDeleteAlert = false
     @State private var showingNewTaskSheet = false
     @State private var filter: ProjectTaskFilter = .all
     
     // フィルタリングされたタスク
-    @State private var filteredTasks: [Task] = []
+    @State private var filteredTasks: [TMTask] = []
     
     // 初期化
     init(project: Project) {
         self.project = project
-        self._editedProject = State(initialValue: project)
+        // CoreData Projectから表示用のTMProjectに変換
+        let initialTMProject = TMProject(
+            id: project.id ?? UUID(),
+            name: project.name ?? "",
+            description: project.projectDescription,
+            colorHex: project.colorHex ?? "#4A90E2",
+            creationDate: project.creationDate ?? Date(),
+            dueDate: project.dueDate,
+            completionDate: project.completionDate,
+            taskIds: project.tasks?.compactMap { ($0 as? Task)?.id ?? UUID() } ?? []
+        )
+        self._tmProject = State(initialValue: initialTMProject)
     }
     
     var body: some View {
@@ -60,7 +71,7 @@ struct ProjectDetailView: View {
                 }
             }
         }
-        .navigationTitle(project.name)
+        .navigationTitle(project.name ?? "プロジェクト詳細")
         .navigationBarTitleDisplayMode(.inline)
         .navigationBarItems(trailing: HStack {
             Button(action: {
@@ -77,22 +88,28 @@ struct ProjectDetailView: View {
             }
         })
         .sheet(isPresented: $isEditing) {
-            ProjectEditView(project: editedProject) { updatedProject in
+            ProjectEditView(project: tmProject) { updatedProject in
+                // TMProjectを更新
+                tmProject = updatedProject
+                // CoreDataのプロジェクトも更新
                 projectViewModel.updateProject(updatedProject)
-                editedProject = updatedProject
             }
         }
         .sheet(isPresented: $showingNewTaskSheet) {
             // プロジェクトを選択した状態で新規タスク作成画面を表示
-            TaskCreationViewWithProject(projectId: project.id)
+            if let id = project.id {
+                TaskCreationViewWithProject(projectId: id)
+            }
         }
         .alert(isPresented: $showingDeleteAlert) {
             Alert(
                 title: Text("プロジェクトの削除"),
                 message: Text("このプロジェクトを削除しますか？関連するタスクは削除されませんが、プロジェクトとの関連付けは解除されます。"),
                 primaryButton: .destructive(Text("削除")) {
-                    projectViewModel.deleteProject(id: project.id)
-                    presentationMode.wrappedValue.dismiss()
+                    if let id = project.id {
+                        projectViewModel.deleteProject(id: id)
+                        presentationMode.wrappedValue.dismiss()
+                    }
                 },
                 secondaryButton: .cancel(Text("キャンセル"))
             )
@@ -100,7 +117,7 @@ struct ProjectDetailView: View {
         .onAppear {
             loadProjectTasks()
         }
-        .onChange(of: filter) { _ in
+        .onChange(of: filter) { _, _ in
             filterTasks()
         }
         .background(DesignSystem.Colors.background.edgesIgnoringSafeArea(.all))
@@ -110,7 +127,7 @@ struct ProjectDetailView: View {
     private var projectHeader: some View {
         VStack(spacing: DesignSystem.Spacing.m) {
             // 進捗バー
-            let progress = projectViewModel.calculateProgress(for: project, tasks: taskViewModel.tasks)
+            let progress = projectViewModel.calculateProgress(for: tmProject, tasks: taskViewModel.tasks)
             
             VStack(alignment: .leading, spacing: DesignSystem.Spacing.xs) {
                 HStack {
@@ -125,12 +142,17 @@ struct ProjectDetailView: View {
                         .foregroundColor(DesignSystem.Colors.textPrimary)
                 }
                 
-                AnimatedProgressBarView(value: progress, color: project.color, height: 10)
+                AnimatedProgressBarView(value: progress, color: tmProject.color, height: 10)
             }
             
             // プロジェクト統計
             HStack {
-                let projectTasks = taskViewModel.tasks.filter { project.taskIds.contains($0.id) }
+                let projectTasks = taskViewModel.tasks.filter { tmTask in
+                    if let projectId = project.id {
+                        return tmTask.projectId == projectId
+                    }
+                    return false
+                }
                 let totalTasks = projectTasks.count
                 let completedTasks = projectTasks.filter { $0.isCompleted }.count
                 
@@ -152,17 +174,17 @@ struct ProjectDetailView: View {
                     title: "合計",
                     value: "\(totalTasks)",
                     iconName: "list.bullet",
-                    color: project.color
+                    color: tmProject.color
                 )
             }
             
             // 完了ボタン
-            if project.isCompleted {
+            if tmProject.isCompleted {
                 Button(action: {
-                    var updatedProject = project
+                    var updatedProject = tmProject
                     updatedProject.completionDate = nil
                     projectViewModel.updateProject(updatedProject)
-                    editedProject = updatedProject
+                    tmProject = updatedProject
                 }) {
                     Text("未完了に戻す")
                         .font(DesignSystem.Typography.font(size: DesignSystem.Typography.callout, weight: .medium))
@@ -174,10 +196,10 @@ struct ProjectDetailView: View {
                 }
             } else {
                 Button(action: {
-                    var updatedProject = project
+                    var updatedProject = tmProject
                     updatedProject.completionDate = Date()
                     projectViewModel.updateProject(updatedProject)
-                    editedProject = updatedProject
+                    tmProject = updatedProject
                 }) {
                     Text("完了にする")
                         .font(DesignSystem.Typography.font(size: DesignSystem.Typography.callout, weight: .medium))
@@ -197,7 +219,7 @@ struct ProjectDetailView: View {
     private var projectDetails: some View {
         VStack(alignment: .leading, spacing: DesignSystem.Spacing.m) {
             // 説明
-            if let description = project.description, !description.isEmpty {
+            if let description = tmProject.description, !description.isEmpty {
                 VStack(alignment: .leading, spacing: DesignSystem.Spacing.xs) {
                     Text("説明")
                         .font(DesignSystem.Typography.font(size: DesignSystem.Typography.headline, weight: .semibold))
@@ -227,7 +249,7 @@ struct ProjectDetailView: View {
                         .foregroundColor(DesignSystem.Colors.textSecondary)
                     
                     Circle()
-                        .fill(project.color)
+                        .fill(tmProject.color)
                         .frame(width: 20, height: 20)
                 }
                 
@@ -237,13 +259,13 @@ struct ProjectDetailView: View {
                         .font(DesignSystem.Typography.font(size: DesignSystem.Typography.subheadline))
                         .foregroundColor(DesignSystem.Colors.textSecondary)
                     
-                    Text(project.creationDate.formatted())
+                    Text(tmProject.creationDate.formatted())
                         .font(DesignSystem.Typography.font(size: DesignSystem.Typography.subheadline))
                         .foregroundColor(DesignSystem.Colors.textPrimary)
                 }
                 
                 // 期限日
-                if let dueDate = project.dueDate {
+                if let dueDate = tmProject.dueDate {
                     HStack {
                         Text("期限日:")
                             .font(DesignSystem.Typography.font(size: DesignSystem.Typography.subheadline))
@@ -251,12 +273,12 @@ struct ProjectDetailView: View {
                         
                         Text(dueDate.formatted())
                             .font(DesignSystem.Typography.font(size: DesignSystem.Typography.subheadline))
-                            .foregroundColor(project.isOverdue ? DesignSystem.Colors.error : DesignSystem.Colors.textPrimary)
+                            .foregroundColor(tmProject.isOverdue ? DesignSystem.Colors.error : DesignSystem.Colors.textPrimary)
                     }
                 }
                 
                 // 完了日
-                if let completionDate = project.completionDate {
+                if let completionDate = tmProject.completionDate {
                     HStack {
                         Text("完了日:")
                             .font(DesignSystem.Typography.font(size: DesignSystem.Typography.subheadline))
@@ -290,7 +312,7 @@ struct ProjectDetailView: View {
                                 .foregroundColor(filter == filterOption ? .white : DesignSystem.Colors.textPrimary)
                                 .padding(.horizontal, DesignSystem.Spacing.m)
                                 .padding(.vertical, DesignSystem.Spacing.xs)
-                                .background(filter == filterOption ? project.color : DesignSystem.Colors.card)
+                                .background(filter == filterOption ? tmProject.color : DesignSystem.Colors.card)
                                 .cornerRadius(DesignSystem.CornerRadius.medium)
                         }
                     }
@@ -318,9 +340,9 @@ struct ProjectDetailView: View {
                 .padding(.vertical, 40)
             } else {
                 VStack(spacing: DesignSystem.Spacing.s) {
-                    ForEach(filteredTasks) { task in
-                        NavigationLink(destination: TaskDetailView(taskId: task.id)) {
-                            TaskRowView(task: task)
+                    ForEach(filteredTasks) { tmTask in
+                        NavigationLink(destination: TaskDetailView(taskId: tmTask.id)) {
+                            TaskRowView(task: tmTask)
                         }
                         .buttonStyle(PlainButtonStyle())
                     }
@@ -355,55 +377,57 @@ struct ProjectDetailView: View {
     
     // タスクをフィルタリング
     private func filterTasks() {
-        let projectTasks = taskViewModel.tasks.filter { project.taskIds.contains($0.id) }
-        
-        switch filter {
-        case .all:
-            filteredTasks = projectTasks
-        case .incomplete:
-            filteredTasks = projectTasks.filter { !$0.isCompleted }
-        case .completed:
-            filteredTasks = projectTasks.filter { $0.isCompleted }
-        case .overdue:
-            filteredTasks = projectTasks.filter { $0.isOverdue }
-        case .today:
-            filteredTasks = projectTasks.filter { task in
-                if let dueDate = task.dueDate {
-                    return Calendar.current.isDateInToday(dueDate)
-                }
-                return false
-            }
-        case .upcoming:
-            filteredTasks = projectTasks.filter { task in
-                if let dueDate = task.dueDate, let daysUntilDue = task.daysUntilDue {
-                    return daysUntilDue > 0 && daysUntilDue <= 7
-                }
-                return false
-            }
-        }
-        
-        // ソート：未完了タスクを優先度順、完了タスクを完了日順にする
-        filteredTasks.sort { task1, task2 in
-            if task1.isCompleted && !task2.isCompleted {
-                return false
-            } else if !task1.isCompleted && task2.isCompleted {
-                return true
-            } else if task1.isCompleted && task2.isCompleted {
-                // 両方完了済み -> 完了日で降順
-                if let date1 = task1.completionDate, let date2 = task2.completionDate {
-                    return date1 > date2
-                }
-                return false
-            } else {
-                // 両方未完了 -> 優先度と期限で昇順
-                if task1.priority.rawValue != task2.priority.rawValue {
-                    return task1.priority.rawValue > task2.priority.rawValue
-                } else if let date1 = task1.dueDate, let date2 = task2.dueDate {
-                    return date1 < date2
-                } else if task1.dueDate != nil {
-                    return true
-                } else {
+        if let projectId = project.id {
+            let projectTasks = taskViewModel.tasks.filter { $0.projectId == projectId }
+            
+            switch filter {
+            case .all:
+                filteredTasks = projectTasks
+            case .incomplete:
+                filteredTasks = projectTasks.filter { !$0.isCompleted }
+            case .completed:
+                filteredTasks = projectTasks.filter { $0.isCompleted }
+            case .overdue:
+                filteredTasks = projectTasks.filter { $0.isOverdue }
+            case .today:
+                filteredTasks = projectTasks.filter { task in
+                    if let dueDate = task.dueDate {
+                        return Calendar.current.isDateInToday(dueDate)
+                    }
                     return false
+                }
+            case .upcoming:
+                filteredTasks = projectTasks.filter { task in
+                    if let dueDate = task.dueDate, let daysUntilDue = task.daysUntilDue {
+                        return daysUntilDue > 0 && daysUntilDue <= 7
+                    }
+                    return false
+                }
+            }
+            
+            // ソート：未完了タスクを優先度順、完了タスクを完了日順にする
+            filteredTasks.sort { task1, task2 in
+                if task1.isCompleted && !task2.isCompleted {
+                    return false
+                } else if !task1.isCompleted && task2.isCompleted {
+                    return true
+                } else if task1.isCompleted && task2.isCompleted {
+                    // 両方完了済み -> 完了日で降順
+                    if let date1 = task1.completionDate, let date2 = task2.completionDate {
+                        return date1 > date2
+                    }
+                    return false
+                } else {
+                    // 両方未完了 -> 優先度と期限で昇順
+                    if task1.priority.rawValue != task2.priority.rawValue {
+                        return task1.priority.rawValue > task2.priority.rawValue
+                    } else if let date1 = task1.dueDate, let date2 = task2.dueDate {
+                        return date1 < date2
+                    } else if task1.dueDate != nil {
+                        return true
+                    } else {
+                        return false
+                    }
                 }
             }
         }
@@ -413,8 +437,8 @@ struct ProjectDetailView: View {
 // プロジェクト編集ビュー
 struct ProjectEditView: View {
     @Environment(\.presentationMode) var presentationMode
-    @State var project: Project
-    var onSave: (Project) -> Void
+    @State var project: TMProject
+    var onSave: (TMProject) -> Void
     
     @State private var name: String
     @State private var description: String
@@ -437,7 +461,7 @@ struct ProjectEditView: View {
         "#34495E"  // 紺
     ]
     
-    init(project: Project, onSave: @escaping (Project) -> Void) {
+    init(project: TMProject, onSave: @escaping (TMProject) -> Void) {
         self.project = project
         self.onSave = onSave
         
@@ -636,10 +660,34 @@ enum ProjectTaskFilter: CaseIterable {
     }
 }
 
+extension Project {
+    // Project型からTMProject型への変換拡張
+    var asTMProject: TMProject {
+        return TMProject(
+            id: self.id ?? UUID(),
+            name: self.name ?? "",
+            description: self.projectDescription,
+            colorHex: self.colorHex ?? "#4A90E2",
+            creationDate: self.creationDate ?? Date(),
+            dueDate: self.dueDate,
+            completionDate: self.completionDate,
+            taskIds: self.tasks?.compactMap { ($0 as? Task)?.id } ?? []
+        )
+    }
+}
+
 struct ProjectDetailView_Previews: PreviewProvider {
     static var previews: some View {
         NavigationView {
-            ProjectDetailView(project: Project.samples[0])
+            // CoreDataコンテキストからプロジェクトを取得する必要がある
+            let context = PersistenceController.preview.container.viewContext
+            let project = Project(context: context)
+            project.id = UUID()
+            project.name = "サンプルプロジェクト"
+            project.projectDescription = "これはサンプルプロジェクトです"
+            project.colorHex = "#4A90E2"
+            
+            return ProjectDetailView(project: project)
                 .environmentObject(TaskViewModel())
                 .environmentObject(ProjectViewModel())
         }

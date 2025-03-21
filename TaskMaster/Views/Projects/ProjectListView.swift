@@ -259,9 +259,11 @@ struct ProjectListView: View {
                 }
                 
                 // 進捗バー
-                let progress = projectViewModel.calculateProgress(for: project, tasks: taskViewModel.tasks)
+                // ここでは直接ProjectをTMProjectに変換して使用
+                let tmProject = project.asTMProject
+                let progress = projectViewModel.calculateProgress(for: tmProject, tasks: taskViewModel.tasks)
                 HStack(spacing: DesignSystem.Spacing.s) {
-                    ProgressBarView(value: progress, color: Color(hex: project.colorHex ?? "#4A90E2") ?? .blue, height: 8)
+                    ProgressBarView(value: progress, color: tmProject.color, height: 8)
                     
                     Text("\(Int(progress * 100))%")
                         .font(DesignSystem.Typography.font(size: DesignSystem.Typography.caption1))
@@ -310,3 +312,4 @@ struct ProjectListView: View {
                 .environmentObject(TaskViewModel())
         }
     }
+
