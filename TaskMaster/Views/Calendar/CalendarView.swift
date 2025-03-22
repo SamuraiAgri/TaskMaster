@@ -308,9 +308,8 @@ struct CalendarView: View {
             VStack(spacing: DesignSystem.Spacing.s) {
                 ForEach(tasks) { event in
                     if let tmTask = taskViewModel.tasks.first(where: { $0.id == event.id }) {
-                        let task = convertToTask(tmTask)
-                        NavigationLink(destination: TaskDetailView(taskId: task.id)) {
-                            TaskRowView(task: task)
+                        NavigationLink(destination: TaskDetailView(taskId: event.id)) {
+                            TaskRowView(task: tmTask)
                         }
                         .buttonStyle(PlainButtonStyle())
                         .background(DesignSystem.Colors.card)
@@ -321,25 +320,6 @@ struct CalendarView: View {
             }
             .padding(.bottom)
         }
-    }
-    
-    // Helper: TMTaskをTaskに変換する関数
-    private func convertToTask(_ tmTask: TMTask) -> Task {
-        let task = Task(context: DataService.shared.viewContext)
-        task.id = tmTask.id
-        task.title = tmTask.title
-        task.taskDescription = tmTask.description
-        task.creationDate = tmTask.creationDate
-        task.dueDate = tmTask.dueDate
-        task.completionDate = tmTask.completionDate
-        task.priority = Int16(tmTask.priority.rawValue)
-        task.status = tmTask.status.rawValue
-        task.isRepeating = tmTask.isRepeating
-        task.repeatType = tmTask.repeatType.rawValue
-        task.reminderDate = tmTask.reminderDate
-        // 注意: この関数はViewContext内のエンティティを作成しますが、
-        // コンテキストには保存されていないため、純粋に表示用です
-        return task
     }
     
     // ヘルパーメソッド
