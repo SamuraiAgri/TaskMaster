@@ -133,7 +133,7 @@ struct StatisticsView: View {
         .padding()
         .background(DesignSystem.Colors.card)
         .cornerRadius(DesignSystem.CornerRadius.large)
-        .withShadow(DesignSystem.Shadow.medium)
+        .shadow(color: DesignSystem.Shadows.medium.color, radius: DesignSystem.Shadows.medium.radius, x: DesignSystem.Shadows.medium.x, y: DesignSystem.Shadows.medium.y)
         .padding(.horizontal)
     }
     
@@ -170,7 +170,7 @@ struct StatisticsView: View {
         .padding()
         .background(DesignSystem.Colors.card)
         .cornerRadius(DesignSystem.CornerRadius.large)
-        .withShadow(DesignSystem.Shadow.small)
+        .shadow(color: DesignSystem.Shadows.small.color, radius: DesignSystem.Shadows.small.radius, x: DesignSystem.Shadows.small.x, y: DesignSystem.Shadows.small.y)
         .padding(.horizontal)
     }
     
@@ -212,7 +212,7 @@ struct StatisticsView: View {
         .padding()
         .background(DesignSystem.Colors.card)
         .cornerRadius(DesignSystem.CornerRadius.large)
-        .withShadow(DesignSystem.Shadow.small)
+        .shadow(color: DesignSystem.Shadows.small.color, radius: DesignSystem.Shadows.small.radius, x: DesignSystem.Shadows.small.x, y: DesignSystem.Shadows.small.y)
         .padding(.horizontal)
     }
     
@@ -223,18 +223,21 @@ struct StatisticsView: View {
                 .font(DesignSystem.Typography.font(size: DesignSystem.Typography.headline, weight: .semibold))
                 .foregroundColor(DesignSystem.Colors.textPrimary)
             
+            // 週間活動チャート用のデータ準備
+            let weeklyData = prepareWeeklyChartData()
+            
             HStack(alignment: .bottom, spacing: DesignSystem.Spacing.xs) {
                 ForEach(0..<7, id: \.self) { index in
-                    let value = homeViewModel.statistics.dailyCompletions[index]
-                    let maxValue = homeViewModel.statistics.dailyCompletions.max() ?? 1
+                    let value = weeklyData.values[index]
+                    let maxValue = weeklyData.maxValue
                     
                     VStack(spacing: DesignSystem.Spacing.xxs) {
                         // バー
                         RoundedRectangle(cornerRadius: DesignSystem.CornerRadius.small)
-                            .fill(getDayColor(index))
+                            .fill(weeklyData.colors[index])
                             .frame(
                                 width: (UIScreen.main.bounds.width - 100) / 7 - DesignSystem.Spacing.xs,
-                                height: value > 0 ? CGFloat(value) / CGFloat(maxValue) * 120 : 5
+                                height: value > 0 ? CGFloat(value) / CGFloat(maxValue > 0 ? maxValue : 1) * 120 : 5
                             )
                         
                         // 数値
@@ -243,7 +246,7 @@ struct StatisticsView: View {
                             .foregroundColor(DesignSystem.Colors.textPrimary)
                         
                         // 曜日ラベル
-                        Text(getDayLabel(index))
+                        Text(weeklyData.labels[index])
                             .font(DesignSystem.Typography.font(size: DesignSystem.Typography.caption1))
                             .foregroundColor(DesignSystem.Colors.textSecondary)
                     }
@@ -255,8 +258,18 @@ struct StatisticsView: View {
         .padding()
         .background(DesignSystem.Colors.card)
         .cornerRadius(DesignSystem.CornerRadius.large)
-        .withShadow(DesignSystem.Shadow.small)
+        .shadow(color: DesignSystem.Shadows.small.color, radius: DesignSystem.Shadows.small.radius, x: DesignSystem.Shadows.small.x, y: DesignSystem.Shadows.small.y)
         .padding(.horizontal)
+    }
+    
+    // 週間チャートデータの準備
+    private func prepareWeeklyChartData() -> (values: [Int], maxValue: Int, labels: [String], colors: [Color]) {
+        let values = homeViewModel.statistics.dailyCompletions
+        let maxValue = values.max() ?? 1
+        let labels = (0..<7).map { getDayLabel($0) }
+        let colors = (0..<7).map { getDayColor($0) }
+        
+        return (values: values, maxValue: maxValue, labels: labels, colors: colors)
     }
     
     // プロジェクト進捗カード
@@ -273,24 +286,9 @@ struct StatisticsView: View {
                     .frame(maxWidth: .infinity, alignment: .center)
                     .padding()
             } else {
-                ForEach(homeViewModel.activeProjects.prefix(5)) { project in
-                    VStack(alignment: .leading, spacing: DesignSystem.Spacing.xs) {
-                        HStack {
-                            Text(project.name)
-                                .font(DesignSystem.Typography.font(size: DesignSystem.Typography.callout, weight: .medium))
-                                .foregroundColor(DesignSystem.Colors.textPrimary)
-                            
-                            Spacer()
-                            
-                            let progress = projectViewModel.calculateProgress(for: project, tasks: taskViewModel.tasks)
-                            Text("\(Int(progress * 100))%")
-                                .font(DesignSystem.Typography.font(size: DesignSystem.Typography.footnote))
-                                .foregroundColor(DesignSystem.Colors.textSecondary)
-                        }
-                        
-                        ProgressBarView(value: projectViewModel.calculateProgress(for: project, tasks: taskViewModel.tasks), color: project.color, height: 8)
-                    }
-                    .padding(.vertical, DesignSystem.Spacing.xs)
+                ForEach(0..<min(homeViewModel.activeProjects.count, 5), id: \.self) { index in
+                    let project = homeViewModel.activeProjects[index]
+                    ProjectProgressItemView(project: project)
                 }
                 
                 if homeViewModel.activeProjects.count > 5 {
@@ -309,8 +307,35 @@ struct StatisticsView: View {
         .padding()
         .background(DesignSystem.Colors.card)
         .cornerRadius(DesignSystem.CornerRadius.large)
-        .withShadow(DesignSystem.Shadow.small)
+        .shadow(color: DesignSystem.Shadows.small.color, radius: DesignSystem.Shadows.small.radius, x: DesignSystem.Shadows.small.x, y: DesignSystem.Shadows.small.y)
         .padding(.horizontal)
+    }
+    
+    // プロジェクト進捗アイテム
+    private struct ProjectProgressItemView: View {
+        var project: TMProject
+        @EnvironmentObject var taskViewModel: TaskViewModel
+        @EnvironmentObject var projectViewModel: ProjectViewModel
+        
+        var body: some View {
+            VStack(alignment: .leading, spacing: DesignSystem.Spacing.xs) {
+                HStack {
+                    Text(project.name)
+                        .font(DesignSystem.Typography.font(size: DesignSystem.Typography.callout, weight: .medium))
+                        .foregroundColor(DesignSystem.Colors.textPrimary)
+                    
+                    Spacer()
+                    
+                    let progress = projectViewModel.calculateProgress(for: project, tasks: taskViewModel.tasks)
+                    Text("\(Int(progress * 100))%")
+                        .font(DesignSystem.Typography.font(size: DesignSystem.Typography.footnote))
+                        .foregroundColor(DesignSystem.Colors.textSecondary)
+                }
+                
+                ProgressBarView(value: projectViewModel.calculateProgress(for: project, tasks: taskViewModel.tasks), color: project.color, height: 8)
+            }
+            .padding(.vertical, DesignSystem.Spacing.xs)
+        }
     }
     
     // 曜日ラベルの取得
@@ -438,60 +463,6 @@ struct BarChartItem: View {
                 .foregroundColor(DesignSystem.Colors.textSecondary)
         }
         .frame(maxWidth: .infinity)
-    }
-}
-
-// 期限切れタスクビュー
-struct OverdueTasksView: View {
-    var tasks: [Task]
-    
-    var body: some View {
-        VStack(alignment: .leading, spacing: DesignSystem.Spacing.m) {
-            HStack {
-                Text("期限切れのタスク")
-                    .font(DesignSystem.Typography.font(size: DesignSystem.Typography.headline, weight: .semibold))
-                    .foregroundColor(DesignSystem.Colors.textPrimary)
-                
-                Spacer()
-                
-                NavigationLink(destination: TaskListView(initialFilter: .overdue)) {
-                    Text("すべて見る")
-                        .font(DesignSystem.Typography.font(size: DesignSystem.Typography.subheadline))
-                        .foregroundColor(DesignSystem.Colors.primary)
-                }
-            }
-            
-            VStack(spacing: DesignSystem.Spacing.s) {
-                ForEach(tasks.prefix(3)) { task in
-                    NavigationLink(destination: TaskDetailView(taskId: task.id)) {
-                        HStack {
-                            VStack(alignment: .leading, spacing: DesignSystem.Spacing.xxs) {
-                                Text(task.title)
-                                    .font(DesignSystem.Typography.font(size: DesignSystem.Typography.callout, weight: .medium))
-                                    .foregroundColor(DesignSystem.Colors.textPrimary)
-                                    .lineLimit(1)
-                                
-                                if let dueDate = task.dueDate, let days = task.daysUntilDue {
-                                    Text("\(abs(days))日経過")
-                                        .font(DesignSystem.Typography.font(size: DesignSystem.Typography.footnote))
-                                        .foregroundColor(DesignSystem.Colors.error)
-                                }
-                            }
-                            
-                            Spacer()
-                            
-                            Image(systemName: "chevron.right")
-                                .foregroundColor(DesignSystem.Colors.textSecondary)
-                                .font(.system(size: 14))
-                        }
-                        .padding()
-                        .background(DesignSystem.Colors.card)
-                        .cornerRadius(DesignSystem.CornerRadius.medium)
-                    }
-                    .buttonStyle(PlainButtonStyle())
-                }
-            }
-        }
     }
 }
 
