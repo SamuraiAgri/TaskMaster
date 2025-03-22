@@ -1,10 +1,3 @@
-//
-//  ContentView.swift
-//  TaskMaster
-//
-//  Created by rinka on 2025/03/19.
-//
-
 import SwiftUI
 import CoreData
 
@@ -19,7 +12,7 @@ struct ContentView: View {
         TabView {
             HomeView()
                 .tabItem {
-                    Label("ホーム", systemImage: "house")
+                    Label("ホーム", systemImage: "house.fill")
                 }
                 .tag(0)
             
@@ -31,23 +24,24 @@ struct ContentView: View {
             
             ProjectListView()
                 .tabItem {
-                    Label("プロジェクト", systemImage: "folder")
+                    Label("プロジェクト", systemImage: "folder.fill")
                 }
                 .tag(2)
             
-            CalendarView()
-                .tabItem {
-                    Label("カレンダー", systemImage: "calendar")
-                }
-                .tag(3)
-            
             StatisticsView()
                 .tabItem {
-                    Label("統計", systemImage: "chart.bar")
+                    Label("統計", systemImage: "chart.bar.fill")
                 }
-                .tag(4)
+                .tag(3)
         }
         .accentColor(DesignSystem.Colors.primary)
+        .onAppear {
+            // データの初期ロード
+            taskViewModel.loadTasks()
+            projectViewModel.loadProjects()
+            tagViewModel.loadTags()
+            homeViewModel.loadData()
+        }
     }
 }
 

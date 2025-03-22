@@ -9,9 +9,8 @@ struct TaskListView: View {
     // UI制御プロパティ
     @State private var showingFilterSheet = false
     @State private var showingNewTaskSheet = false
-    @State private var showingSortOptions = false
     @State private var showingSearchBar = false
-    @State private var refreshTrigger = false
+    @State private var searchText = ""
     
     // 初期フィルター
     var initialFilter: TaskFilter?
@@ -19,40 +18,78 @@ struct TaskListView: View {
     var body: some View {
         NavigationView {
             VStack(spacing: 0) {
-                // 検索・フィルターバー
+                // 検索バー（表示されている場合）
                 if showingSearchBar {
-                    searchFilterBar
+                    HStack {
+                        Image(systemName: "magnifyingglass")
+                            .foregroundColor(DesignSystem.Colors.textSecondary)
+                        
+                        TextField("タスクを検索", text: $searchText)
+                            .font(DesignSystem.Typography.font(size: DesignSystem.Typography.body))
+                            .onChange(of: searchText) { oldValue, newValue in
+                                taskViewModel.searchText = newValue
+                            }
+                        
+                        if !searchText.isEmpty {
+                            Button(action: {
+                                searchText = ""
+                                taskViewModel.searchText = ""
+                            }) {
+                                Image(systemName: "xmark.circle.fill")
+                                    .foregroundColor(DesignSystem.Colors.textSecondary)
+                            }
+                        }
+                    }
+                    .padding()
+                    .background(DesignSystem.Colors.card)
+                    .cornerRadius(DesignSystem.CornerRadius.medium)
+                    .padding([.horizontal, .top])
+                }
+                
+                // フィルターチップ
+                ScrollView(.horizontal, showsIndicators: false) {
+                    HStack(spacing: DesignSystem.Spacing.m) {
+                        ForEach(TaskFilter.allCases, id: \.self) { filter in
+                            FilterChip(
+                                title: filter.title,
+                                isSelected: taskViewModel.selectedFilter == filter,
+                                action: {
+                                    taskViewModel.selectedFilter = filter
+                                }
+                            )
+                        }
+                    }
+                    .padding([.horizontal, .vertical])
                 }
                 
                 // タスクリスト
                 if taskViewModel.filteredTasks.isEmpty {
                     emptyStateView
                 } else {
-                    taskListContent
+                    List {
+                        ForEach(taskViewModel.filteredTasks) { tmTask in
+                            NavigationLink(destination: TaskDetailView(taskId: tmTask.id)) {
+                                SimpleTaskRowView(task: tmTask)
+                            }
+                            .listRowBackground(DesignSystem.Colors.card)
+                            .listRowSeparator(.hidden)
+                            .listRowInsets(EdgeInsets(top: 4, leading: 16, bottom: 4, trailing: 16))
+                        }
+                        .onDelete(perform: taskViewModel.deleteTask)
+                    }
+                    .listStyle(PlainListStyle())
+                    .refreshable {
+                        taskViewModel.loadTasks()
+                    }
                 }
             }
             .navigationTitle("タスク")
             .navigationBarItems(
-                leading: HStack {
-                    Button(action: {
-                        showingSearchBar.toggle()
-                    }) {
-                        Image(systemName: showingSearchBar ? "magnifyingglass.circle.fill" : "magnifyingglass")
-                            .font(.system(size: 18, weight: .semibold))
-                    }
-                    
-                    Button(action: {
-                        showingFilterSheet = true
-                    }) {
-                        HStack(spacing: 4) {
-                            Image(systemName: "line.3.horizontal.decrease.circle\(taskViewModel.selectedFilter != .all ? ".fill" : "")")
-                                .font(.system(size: 18, weight: .semibold))
-                            
-                            Text(taskViewModel.selectedFilter.title)
-                                .font(DesignSystem.Typography.font(size: DesignSystem.Typography.footnote))
-                                .lineLimit(1)
-                        }
-                    }
+                leading: Button(action: {
+                    showingSearchBar.toggle()
+                }) {
+                    Image(systemName: showingSearchBar ? "magnifyingglass.circle.fill" : "magnifyingglass")
+                        .font(.system(size: 18, weight: .semibold))
                 },
                 trailing: Button(action: {
                     showingNewTaskSheet = true
@@ -62,20 +99,6 @@ struct TaskListView: View {
                 }
             )
             .background(DesignSystem.Colors.background.edgesIgnoringSafeArea(.all))
-            .actionSheet(isPresented: $showingFilterSheet) {
-                ActionSheet(
-                    title: Text("フィルター"),
-                    buttons: [
-                        .default(Text("すべてのタスク")) { taskViewModel.selectedFilter = .all },
-                        .default(Text("今日のタスク")) { taskViewModel.selectedFilter = .today },
-                        .default(Text("予定されたタスク")) { taskViewModel.selectedFilter = .upcoming },
-                        .default(Text("期限切れのタスク")) { taskViewModel.selectedFilter = .overdue },
-                        .default(Text("完了したタスク")) { taskViewModel.selectedFilter = .completed },
-                        .default(Text("高優先度タスク")) { taskViewModel.selectedFilter = .highPriority },
-                        .cancel(Text("キャンセル"))
-                    ]
-                )
-            }
             .sheet(isPresented: $showingNewTaskSheet) {
                 TaskCreationView()
             }
@@ -85,100 +108,6 @@ struct TaskListView: View {
                     taskViewModel.selectedFilter = initialFilter
                 }
             }
-        }
-    }
-    
-    // 検索フィルターバー
-    private var searchFilterBar: some View {
-        VStack(spacing: DesignSystem.Spacing.xs) {
-            // 検索バー
-            HStack {
-                Image(systemName: "magnifyingglass")
-                    .foregroundColor(DesignSystem.Colors.textSecondary)
-                
-                TextField("タスクを検索", text: $taskViewModel.searchText)
-                    .font(DesignSystem.Typography.font(size: DesignSystem.Typography.body))
-                
-                if !taskViewModel.searchText.isEmpty {
-                    Button(action: {
-                        taskViewModel.searchText = ""
-                    }) {
-                        Image(systemName: "xmark.circle.fill")
-                            .foregroundColor(DesignSystem.Colors.textSecondary)
-                    }
-                }
-            }
-            .padding()
-            .background(DesignSystem.Colors.card)
-            .cornerRadius(DesignSystem.CornerRadius.medium)
-            
-            // ソートオプション
-            HStack {
-                Text("並び替え:")
-                    .font(DesignSystem.Typography.font(size: DesignSystem.Typography.footnote))
-                    .foregroundColor(DesignSystem.Colors.textSecondary)
-                
-                Button(action: {
-                    showingSortOptions = true
-                }) {
-                    HStack {
-                        Text(taskViewModel.selectedSortOption.title)
-                            .font(DesignSystem.Typography.font(size: DesignSystem.Typography.footnote))
-                            .foregroundColor(DesignSystem.Colors.primary)
-                        
-                        Image(systemName: "chevron.down")
-                            .font(.system(size: 12))
-                            .foregroundColor(DesignSystem.Colors.primary)
-                    }
-                }
-                
-                Spacer()
-                
-                Button(action: {
-                    taskViewModel.isAscending.toggle()
-                }) {
-                    Image(systemName: taskViewModel.isAscending ? "arrow.up" : "arrow.down")
-                        .font(.system(size: 14))
-                        .foregroundColor(DesignSystem.Colors.primary)
-                }
-            }
-            .padding(.horizontal)
-            .padding(.bottom, DesignSystem.Spacing.xs)
-                            .actionSheet(isPresented: $showingSortOptions) {
-                ActionSheet(
-                    title: Text("並び替え"),
-                    buttons: [
-                        .default(Text("期限日")) { taskViewModel.selectedSortOption = .dueDate },
-                        .default(Text("優先度")) { taskViewModel.selectedSortOption = .priority },
-                        .default(Text("タイトル")) { taskViewModel.selectedSortOption = .title },
-                        .default(Text("作成日")) { taskViewModel.selectedSortOption = .creationDate },
-                        .default(Text("完了日")) { taskViewModel.selectedSortOption = .completionDate },
-                        .cancel(Text("キャンセル"))
-                    ]
-                )
-            }
-        }
-        .padding(.horizontal)
-        .background(DesignSystem.Colors.background)
-    }
-    
-    // タスクリスト（タスクがある場合）
-    private var taskListContent: some View {
-        List {
-            ForEach(taskViewModel.filteredTasks) { tmTask in
-                NavigationLink(destination: TaskDetailView(taskId: tmTask.id)) {
-                    TaskRowView(task: tmTask)
-                }
-                .listRowBackground(DesignSystem.Colors.card)
-                .listRowSeparator(.hidden)
-                .listRowInsets(EdgeInsets(top: 4, leading: 16, bottom: 4, trailing: 16))
-            }
-            .onDelete(perform: taskViewModel.deleteTask)
-        }
-        .listStyle(PlainListStyle())
-        .refreshable {
-            taskViewModel.loadTasks()
-            refreshTrigger.toggle()
         }
     }
     
@@ -238,12 +167,11 @@ struct TaskListView: View {
     }
 }
 
-// タスク行ビュー
-struct TaskRowView: View {
+// シンプルなタスク行
+struct SimpleTaskRowView: View {
     @State var task: TMTask
     @EnvironmentObject var taskViewModel: TaskViewModel
     @EnvironmentObject var projectViewModel: ProjectViewModel
-    @EnvironmentObject var tagViewModel: TagViewModel
     @State private var isCompleted: Bool
     
     init(task: TMTask) {
@@ -273,16 +201,10 @@ struct TaskRowView: View {
                     .lineLimit(1)
                 
                 HStack(spacing: DesignSystem.Spacing.s) {
-                    // 優先度
-                    HStack(spacing: DesignSystem.Spacing.xxs) {
-                        Circle()
-                            .fill(Color.priorityColor(task.priority))
-                            .frame(width: 8, height: 8)
-                        
-                        Text(task.priority.title)
-                            .font(DesignSystem.Typography.font(size: DesignSystem.Typography.caption1))
-                            .foregroundColor(DesignSystem.Colors.textSecondary)
-                    }
+                    // 優先度マーク
+                    Circle()
+                        .fill(Color.priorityColor(task.priority))
+                        .frame(width: 8, height: 8)
                     
                     // プロジェクト
                     if let projectId = task.projectId, let project = projectViewModel.getProject(by: projectId) {
@@ -297,20 +219,6 @@ struct TaskRowView: View {
                                 .lineLimit(1)
                         }
                     }
-                    
-                    // タグ（一つだけ表示）
-                    if !task.tagIds.isEmpty, let tagId = task.tagIds.first, let tag = tagViewModel.getTag(by: tagId) {
-                        HStack(spacing: DesignSystem.Spacing.xxs) {
-                            Circle()
-                                .fill(tag.color)
-                                .frame(width: 8, height: 8)
-                            
-                            Text(tag.name)
-                                .font(DesignSystem.Typography.font(size: DesignSystem.Typography.caption1))
-                                .foregroundColor(DesignSystem.Colors.textSecondary)
-                                .lineLimit(1)
-                        }
-                    }
                 }
             }
             
@@ -318,21 +226,32 @@ struct TaskRowView: View {
             
             // 期限日
             if let dueDate = task.dueDate {
-                VStack(alignment: .trailing, spacing: DesignSystem.Spacing.xxs) {
-                    Text(dueDate.relativeDisplay)
-                        .font(DesignSystem.Typography.font(size: DesignSystem.Typography.footnote))
-                        .foregroundColor(taskViewModel.dueDateColor(for: task))
-                    
-                    // 繰り返しタスクマーク
-                    if task.isRepeating {
-                        Image(systemName: "repeat")
-                            .font(.system(size: 10))
-                            .foregroundColor(DesignSystem.Colors.textSecondary)
-                    }
-                }
+                Text(dueDate.relativeDisplay)
+                    .font(DesignSystem.Typography.font(size: DesignSystem.Typography.footnote))
+                    .foregroundColor(taskViewModel.dueDateColor(for: task))
             }
         }
         .padding(DesignSystem.Spacing.s)
+    }
+}
+
+// フィルターチップ
+struct FilterChip: View {
+    var title: String
+    var isSelected: Bool
+    var action: () -> Void
+    
+    var body: some View {
+        Button(action: action) {
+            Text(title)
+                .font(DesignSystem.Typography.font(size: DesignSystem.Typography.footnote, weight: isSelected ? .medium : .regular))
+                .padding(.horizontal, DesignSystem.Spacing.s)
+                .padding(.vertical, DesignSystem.Spacing.xs)
+                .foregroundColor(isSelected ? .white : DesignSystem.Colors.textPrimary)
+                .background(isSelected ? DesignSystem.Colors.primary : DesignSystem.Colors.card)
+                .cornerRadius(DesignSystem.CornerRadius.small)
+                .shadow(color: isSelected ? DesignSystem.Colors.primary.opacity(0.3) : Color.clear, radius: 2, x: 0, y: 1)
+        }
     }
 }
 
