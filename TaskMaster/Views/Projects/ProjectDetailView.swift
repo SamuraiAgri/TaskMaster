@@ -36,18 +36,229 @@ struct ProjectDetailView: View {
     
     var body: some View {
         ScrollView {
-            VStack(spacing: DesignSystem.Spacing.l) {
+            VStack(spacing: DesignSystem.Spacing.m) {
                 // プロジェクトヘッダー
-                projectHeader
+                VStack(spacing: DesignSystem.Spacing.m) {
+                    // 進捗バー
+                    let progress = projectViewModel.calculateProgress(for: tmProject, tasks: taskViewModel.tasks)
+                    
+                    VStack(alignment: .leading, spacing: DesignSystem.Spacing.xs) {
+                        HStack {
+                            Text("進捗状況")
+                                .font(DesignSystem.Typography.font(size: DesignSystem.Typography.subheadline))
+                                .foregroundColor(DesignSystem.Colors.textSecondary)
+                            
+                            Spacer()
+                            
+                            Text("\(Int(progress * 100))%")
+                                .font(DesignSystem.Typography.font(size: DesignSystem.Typography.subheadline, weight: .medium))
+                                .foregroundColor(DesignSystem.Colors.textPrimary)
+                        }
+                        
+                        ProgressBarView(value: progress, color: tmProject.color, height: 10)
+                    }
+                    
+                    // プロジェクト統計
+                    HStack {
+                        let projectTasks = taskViewModel.tasks.filter { tmTask in
+                            if let projectId = project.id {
+                                return tmTask.projectId == projectId
+                            }
+                            return false
+                        }
+                        let totalTasks = projectTasks.count
+                        let completedTasks = projectTasks.filter { $0.isCompleted }.count
+                        
+                        // 完了タスク
+                        StatCardSimple(
+                            title: "完了",
+                            value: "\(completedTasks)",
+                            iconName: "checkmark.circle",
+                            color: DesignSystem.Colors.success
+                        )
+                        
+                        // 未完了タスク
+                        StatCardSimple(
+                            title: "未完了",
+                            value: "\(totalTasks - completedTasks)",
+                            iconName: "circle",
+                            color: DesignSystem.Colors.warning
+                        )
+                        
+                        // 合計タスク
+                        StatCardSimple(
+                            title: "合計",
+                            value: "\(totalTasks)",
+                            iconName: "list.bullet",
+                            color: tmProject.color
+                        )
+                    }
+                    
+                    // 完了ボタン
+                    if tmProject.isCompleted {
+                        Button(action: {
+                            var updatedProject = tmProject
+                            updatedProject.completionDate = nil
+                            projectViewModel.updateProject(updatedProject)
+                            tmProject = updatedProject
+                        }) {
+                            Text("未完了に戻す")
+                                .font(DesignSystem.Typography.font(size: DesignSystem.Typography.callout, weight: .medium))
+                                .foregroundColor(.white)
+                                .frame(maxWidth: .infinity)
+                                .padding()
+                                .background(DesignSystem.Colors.warning)
+                                .cornerRadius(DesignSystem.CornerRadius.medium)
+                        }
+                    } else {
+                        Button(action: {
+                            var updatedProject = tmProject
+                            updatedProject.completionDate = Date()
+                            projectViewModel.updateProject(updatedProject)
+                            tmProject = updatedProject
+                        }) {
+                            Text("完了にする")
+                                .font(DesignSystem.Typography.font(size: DesignSystem.Typography.callout, weight: .medium))
+                                .foregroundColor(.white)
+                                .frame(maxWidth: .infinity)
+                                .padding()
+                                .background(DesignSystem.Colors.success)
+                                .cornerRadius(DesignSystem.CornerRadius.medium)
+                        }
+                    }
+                }
+                .padding()
+                .background(DesignSystem.Colors.card)
+                .cornerRadius(DesignSystem.CornerRadius.medium)
                 
                 // プロジェクト詳細
-                projectDetails
+                VStack(alignment: .leading, spacing: DesignSystem.Spacing.m) {
+                    // タイトルと色
+                    HStack {
+                        Text(tmProject.name)
+                            .font(DesignSystem.Typography.font(size: DesignSystem.Typography.title3, weight: .bold))
+                            .foregroundColor(DesignSystem.Colors.textPrimary)
+                        
+                        Circle()
+                            .fill(tmProject.color)
+                            .frame(width: 16, height: 16)
+                    }
+                    
+                    // 説明
+                    if let description = tmProject.description, !description.isEmpty {
+                        VStack(alignment: .leading, spacing: DesignSystem.Spacing.xs) {
+                            Text("説明")
+                                .font(DesignSystem.Typography.font(size: DesignSystem.Typography.headline, weight: .semibold))
+                                .foregroundColor(DesignSystem.Colors.textPrimary)
+                            
+                            Text(description)
+                                .font(DesignSystem.Typography.font(size: DesignSystem.Typography.body))
+                                .foregroundColor(DesignSystem.Colors.textPrimary)
+                        }
+                    }
+                    
+                    // 日付情報
+                    VStack(alignment: .leading, spacing: DesignSystem.Spacing.xs) {
+                        // 作成日
+                        HStack {
+                            Text("作成日:")
+                                .font(DesignSystem.Typography.font(size: DesignSystem.Typography.subheadline))
+                                .foregroundColor(DesignSystem.Colors.textSecondary)
+                            
+                            Text(tmProject.creationDate.formatted())
+                                .font(DesignSystem.Typography.font(size: DesignSystem.Typography.subheadline))
+                                .foregroundColor(DesignSystem.Colors.textPrimary)
+                        }
+                        
+                        // 期限日
+                        if let dueDate = tmProject.dueDate {
+                            HStack {
+                                Text("期限日:")
+                                    .font(DesignSystem.Typography.font(size: DesignSystem.Typography.subheadline))
+                                    .foregroundColor(DesignSystem.Colors.textSecondary)
+                                
+                                Text(dueDate.formatted())
+                                    .font(DesignSystem.Typography.font(size: DesignSystem.Typography.subheadline))
+                                    .foregroundColor(tmProject.isOverdue ? DesignSystem.Colors.error : DesignSystem.Colors.textPrimary)
+                            }
+                        }
+                        
+                        // 完了日
+                        if let completionDate = tmProject.completionDate {
+                            HStack {
+                                Text("完了日:")
+                                    .font(DesignSystem.Typography.font(size: DesignSystem.Typography.subheadline))
+                                    .foregroundColor(DesignSystem.Colors.textSecondary)
+                                
+                                Text(completionDate.formatted())
+                                    .font(DesignSystem.Typography.font(size: DesignSystem.Typography.subheadline))
+                                    .foregroundColor(DesignSystem.Colors.success)
+                            }
+                        }
+                    }
+                }
+                .padding()
+                .background(DesignSystem.Colors.card)
+                .cornerRadius(DesignSystem.CornerRadius.medium)
                 
                 // タスクフィルター
-                taskFilterView
+                VStack(alignment: .leading, spacing: DesignSystem.Spacing.s) {
+                    Text("タスク一覧")
+                        .font(DesignSystem.Typography.font(size: DesignSystem.Typography.headline, weight: .semibold))
+                        .foregroundColor(DesignSystem.Colors.textPrimary)
+                    
+                    ScrollView(.horizontal, showsIndicators: false) {
+                        HStack(spacing: DesignSystem.Spacing.s) {
+                            ForEach(ProjectTaskFilter.allCases, id: \.self) { filterOption in
+                                Button(action: {
+                                    filter = filterOption
+                                    filterTasks()
+                                }) {
+                                    Text(filterOption.title)
+                                        .font(DesignSystem.Typography.font(size: DesignSystem.Typography.footnote))
+                                        .foregroundColor(filter == filterOption ? .white : DesignSystem.Colors.textPrimary)
+                                        .padding(.horizontal, DesignSystem.Spacing.s)
+                                        .padding(.vertical, DesignSystem.Spacing.xs)
+                                        .background(filter == filterOption ? tmProject.color : DesignSystem.Colors.card)
+                                        .cornerRadius(DesignSystem.CornerRadius.small)
+                                }
+                            }
+                        }
+                    }
+                }
+                .padding()
+                .background(DesignSystem.Colors.card)
+                .cornerRadius(DesignSystem.CornerRadius.medium)
                 
                 // タスクリスト
-                taskListView
+                if filteredTasks.isEmpty {
+                    VStack(spacing: DesignSystem.Spacing.m) {
+                        Image(systemName: "list.bullet.clipboard")
+                            .font(.system(size: 40))
+                            .foregroundColor(DesignSystem.Colors.textSecondary.opacity(0.5))
+                        
+                        Text(emptyStateMessage)
+                            .font(DesignSystem.Typography.font(size: DesignSystem.Typography.callout))
+                            .foregroundColor(DesignSystem.Colors.textSecondary)
+                            .multilineTextAlignment(.center)
+                    }
+                    .frame(maxWidth: .infinity)
+                    .padding()
+                    .background(DesignSystem.Colors.card)
+                    .cornerRadius(DesignSystem.CornerRadius.medium)
+                } else {
+                    VStack(spacing: DesignSystem.Spacing.s) {
+                        ForEach(filteredTasks) { tmTask in
+                            NavigationLink(destination: TaskDetailView(taskId: tmTask.id)) {
+                                SimpleTaskRowView(task: tmTask)
+                            }
+                            .buttonStyle(PlainButtonStyle())
+                        }
+                    }
+                    .padding()
+                    .background(DesignSystem.Colors.card)
+                    .cornerRadius(DesignSystem.CornerRadius.medium)
+                }
                 
                 // 新規タスク追加ボタン
                 Button(action: {
@@ -67,9 +278,9 @@ struct ProjectDetailView: View {
                         RoundedRectangle(cornerRadius: DesignSystem.CornerRadius.medium)
                             .stroke(DesignSystem.Colors.primary, lineWidth: 1)
                     )
-                    .padding(.horizontal)
                 }
             }
+            .padding()
         }
         .navigationTitle(project.name ?? "プロジェクト詳細")
         .navigationBarTitleDisplayMode(.inline)
@@ -88,7 +299,7 @@ struct ProjectDetailView: View {
             }
         })
         .sheet(isPresented: $isEditing) {
-            ProjectEditView(project: tmProject) { updatedProject in
+            SimpleProjectEditView(project: tmProject) { updatedProject in
                 // TMProjectを更新
                 tmProject = updatedProject
                 // CoreDataのプロジェクトも更新
@@ -121,235 +332,6 @@ struct ProjectDetailView: View {
             filterTasks()
         }
         .background(DesignSystem.Colors.background.edgesIgnoringSafeArea(.all))
-    }
-    
-    // プロジェクトヘッダー
-    private var projectHeader: some View {
-        VStack(spacing: DesignSystem.Spacing.m) {
-            // 進捗バー
-            let progress = projectViewModel.calculateProgress(for: tmProject, tasks: taskViewModel.tasks)
-            
-            VStack(alignment: .leading, spacing: DesignSystem.Spacing.xs) {
-                HStack {
-                    Text("進捗状況")
-                        .font(DesignSystem.Typography.font(size: DesignSystem.Typography.subheadline))
-                        .foregroundColor(DesignSystem.Colors.textSecondary)
-                    
-                    Spacer()
-                    
-                    Text("\(Int(progress * 100))%")
-                        .font(DesignSystem.Typography.font(size: DesignSystem.Typography.subheadline, weight: .medium))
-                        .foregroundColor(DesignSystem.Colors.textPrimary)
-                }
-                
-                AnimatedProgressBarView(value: progress, color: tmProject.color, height: 10)
-            }
-            
-            // プロジェクト統計
-            HStack {
-                let projectTasks = taskViewModel.tasks.filter { tmTask in
-                    if let projectId = project.id {
-                        return tmTask.projectId == projectId
-                    }
-                    return false
-                }
-                let totalTasks = projectTasks.count
-                let completedTasks = projectTasks.filter { $0.isCompleted }.count
-                
-                StatCard(
-                    title: "完了",
-                    value: "\(completedTasks)",
-                    iconName: "checkmark.circle",
-                    color: DesignSystem.Colors.success
-                )
-                
-                StatCard(
-                    title: "未完了",
-                    value: "\(totalTasks - completedTasks)",
-                    iconName: "circle",
-                    color: DesignSystem.Colors.warning
-                )
-                
-                StatCard(
-                    title: "合計",
-                    value: "\(totalTasks)",
-                    iconName: "list.bullet",
-                    color: tmProject.color
-                )
-            }
-            
-            // 完了ボタン
-            if tmProject.isCompleted {
-                Button(action: {
-                    var updatedProject = tmProject
-                    updatedProject.completionDate = nil
-                    projectViewModel.updateProject(updatedProject)
-                    tmProject = updatedProject
-                }) {
-                    Text("未完了に戻す")
-                        .font(DesignSystem.Typography.font(size: DesignSystem.Typography.callout, weight: .medium))
-                        .foregroundColor(.white)
-                        .frame(maxWidth: .infinity)
-                        .padding()
-                        .background(DesignSystem.Colors.warning)
-                        .cornerRadius(DesignSystem.CornerRadius.medium)
-                }
-            } else {
-                Button(action: {
-                    var updatedProject = tmProject
-                    updatedProject.completionDate = Date()
-                    projectViewModel.updateProject(updatedProject)
-                    tmProject = updatedProject
-                }) {
-                    Text("完了にする")
-                        .font(DesignSystem.Typography.font(size: DesignSystem.Typography.callout, weight: .medium))
-                        .foregroundColor(.white)
-                        .frame(maxWidth: .infinity)
-                        .padding()
-                        .background(DesignSystem.Colors.success)
-                        .cornerRadius(DesignSystem.CornerRadius.medium)
-                }
-            }
-        }
-        .padding()
-        .background(DesignSystem.Colors.card)
-    }
-    
-    // プロジェクト詳細
-    private var projectDetails: some View {
-        VStack(alignment: .leading, spacing: DesignSystem.Spacing.m) {
-            // 説明
-            if let description = tmProject.description, !description.isEmpty {
-                VStack(alignment: .leading, spacing: DesignSystem.Spacing.xs) {
-                    Text("説明")
-                        .font(DesignSystem.Typography.font(size: DesignSystem.Typography.headline, weight: .semibold))
-                        .foregroundColor(DesignSystem.Colors.textPrimary)
-                    
-                    Text(description)
-                        .font(DesignSystem.Typography.font(size: DesignSystem.Typography.body))
-                        .foregroundColor(DesignSystem.Colors.textPrimary)
-                        .padding()
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                        .background(DesignSystem.Colors.card)
-                        .cornerRadius(DesignSystem.CornerRadius.medium)
-                }
-                .padding(.horizontal)
-            }
-            
-            // プロジェクト情報
-            VStack(alignment: .leading, spacing: DesignSystem.Spacing.s) {
-                Text("プロジェクト情報")
-                    .font(DesignSystem.Typography.font(size: DesignSystem.Typography.headline, weight: .semibold))
-                    .foregroundColor(DesignSystem.Colors.textPrimary)
-                
-                // カラー
-                HStack {
-                    Text("カラー:")
-                        .font(DesignSystem.Typography.font(size: DesignSystem.Typography.subheadline))
-                        .foregroundColor(DesignSystem.Colors.textSecondary)
-                    
-                    Circle()
-                        .fill(tmProject.color)
-                        .frame(width: 20, height: 20)
-                }
-                
-                // 作成日
-                HStack {
-                    Text("作成日:")
-                        .font(DesignSystem.Typography.font(size: DesignSystem.Typography.subheadline))
-                        .foregroundColor(DesignSystem.Colors.textSecondary)
-                    
-                    Text(tmProject.creationDate.formatted())
-                        .font(DesignSystem.Typography.font(size: DesignSystem.Typography.subheadline))
-                        .foregroundColor(DesignSystem.Colors.textPrimary)
-                }
-                
-                // 期限日
-                if let dueDate = tmProject.dueDate {
-                    HStack {
-                        Text("期限日:")
-                            .font(DesignSystem.Typography.font(size: DesignSystem.Typography.subheadline))
-                            .foregroundColor(DesignSystem.Colors.textSecondary)
-                        
-                        Text(dueDate.formatted())
-                            .font(DesignSystem.Typography.font(size: DesignSystem.Typography.subheadline))
-                            .foregroundColor(tmProject.isOverdue ? DesignSystem.Colors.error : DesignSystem.Colors.textPrimary)
-                    }
-                }
-                
-                // 完了日
-                if let completionDate = tmProject.completionDate {
-                    HStack {
-                        Text("完了日:")
-                            .font(DesignSystem.Typography.font(size: DesignSystem.Typography.subheadline))
-                            .foregroundColor(DesignSystem.Colors.textSecondary)
-                        
-                        Text(completionDate.formatted())
-                            .font(DesignSystem.Typography.font(size: DesignSystem.Typography.subheadline))
-                            .foregroundColor(DesignSystem.Colors.success)
-                    }
-                }
-            }
-            .padding(.horizontal)
-        }
-    }
-    
-    // タスクフィルター
-    private var taskFilterView: some View {
-        VStack(alignment: .leading, spacing: DesignSystem.Spacing.s) {
-            Text("タスク一覧")
-                .font(DesignSystem.Typography.font(size: DesignSystem.Typography.headline, weight: .semibold))
-                .foregroundColor(DesignSystem.Colors.textPrimary)
-            
-            ScrollView(.horizontal, showsIndicators: false) {
-                HStack(spacing: DesignSystem.Spacing.m) {
-                    ForEach(ProjectTaskFilter.allCases, id: \.self) { filterOption in
-                        Button(action: {
-                            filter = filterOption
-                        }) {
-                            Text(filterOption.title)
-                                .font(DesignSystem.Typography.font(size: DesignSystem.Typography.subheadline))
-                                .foregroundColor(filter == filterOption ? .white : DesignSystem.Colors.textPrimary)
-                                .padding(.horizontal, DesignSystem.Spacing.m)
-                                .padding(.vertical, DesignSystem.Spacing.xs)
-                                .background(filter == filterOption ? tmProject.color : DesignSystem.Colors.card)
-                                .cornerRadius(DesignSystem.CornerRadius.medium)
-                        }
-                    }
-                }
-            }
-        }
-        .padding(.horizontal)
-    }
-    
-    // タスクリスト
-    private var taskListView: some View {
-        VStack {
-            if filteredTasks.isEmpty {
-                VStack(spacing: DesignSystem.Spacing.m) {
-                    Image(systemName: "list.bullet.clipboard")
-                        .font(.system(size: 40))
-                        .foregroundColor(DesignSystem.Colors.textSecondary.opacity(0.5))
-                    
-                    Text(emptyStateMessage)
-                        .font(DesignSystem.Typography.font(size: DesignSystem.Typography.callout))
-                        .foregroundColor(DesignSystem.Colors.textSecondary)
-                        .multilineTextAlignment(.center)
-                }
-                .frame(maxWidth: .infinity)
-                .padding(.vertical, 40)
-            } else {
-                VStack(spacing: DesignSystem.Spacing.s) {
-                    ForEach(filteredTasks) { tmTask in
-                        NavigationLink(destination: TaskDetailView(taskId: tmTask.id)) {
-                            TaskRowView(task: tmTask)
-                        }
-                        .buttonStyle(PlainButtonStyle())
-                    }
-                }
-                .padding(.horizontal)
-            }
-        }
     }
     
     // 空の状態メッセージ
@@ -434,18 +416,18 @@ struct ProjectDetailView: View {
     }
 }
 
-// プロジェクト編集ビュー
-struct ProjectEditView: View {
+// シンプルなプロジェクト編集ビュー
+struct SimpleProjectEditView: View {
     @Environment(\.presentationMode) var presentationMode
     @State var project: TMProject
     var onSave: (TMProject) -> Void
     
+    // 状態変数
     @State private var name: String
     @State private var description: String
     @State private var colorHex: String
     @State private var hasDueDate: Bool
     @State private var dueDate: Date
-    @State private var showingDueDatePicker: Bool = false
     
     // カラーパレット
     private let colorPalette = [
@@ -474,131 +456,52 @@ struct ProjectEditView: View {
     
     var body: some View {
         NavigationView {
-            ScrollView {
-                VStack(alignment: .leading, spacing: DesignSystem.Spacing.l) {
-                    // プロジェクト名入力
-                    VStack(alignment: .leading, spacing: DesignSystem.Spacing.s) {
-                        Text("プロジェクト名")
-                            .font(DesignSystem.Typography.font(size: DesignSystem.Typography.headline))
-                            .foregroundColor(DesignSystem.Colors.textPrimary)
-                        
-                        TextField("プロジェクト名", text: $name)
-                            .font(DesignSystem.Typography.font(size: DesignSystem.Typography.body))
-                            .padding()
-                            .background(DesignSystem.Colors.card)
-                            .cornerRadius(DesignSystem.CornerRadius.medium)
-                    }
+            Form {
+                Section(header: Text("基本情報")) {
+                    TextField("プロジェクト名", text: $name)
                     
-                    // 説明入力
-                    VStack(alignment: .leading, spacing: DesignSystem.Spacing.s) {
-                        Text("説明（任意）")
-                            .font(DesignSystem.Typography.font(size: DesignSystem.Typography.headline))
-                            .foregroundColor(DesignSystem.Colors.textPrimary)
-                        
-                        TextEditor(text: $description)
-                            .font(DesignSystem.Typography.font(size: DesignSystem.Typography.body))
-                            .padding()
-                            .frame(minHeight: 120)
-                            .background(DesignSystem.Colors.card)
-                            .cornerRadius(DesignSystem.CornerRadius.medium)
-                    }
-                    
-                    // カラー選択
-                    VStack(alignment: .leading, spacing: DesignSystem.Spacing.s) {
-                        Text("カラー")
-                            .font(DesignSystem.Typography.font(size: DesignSystem.Typography.headline))
-                            .foregroundColor(DesignSystem.Colors.textPrimary)
-                        
-                        LazyVGrid(columns: [
-                            GridItem(.flexible()),
-                            GridItem(.flexible()),
-                            GridItem(.flexible()),
-                            GridItem(.flexible()),
-                            GridItem(.flexible())
-                        ], spacing: 16) {
-                            ForEach(colorPalette, id: \.self) { hex in
-                                Button(action: {
-                                    colorHex = hex
-                                }) {
-                                    ZStack {
-                                        Circle()
-                                            .fill(Color(hex: hex) ?? .blue)
-                                            .frame(width: 40, height: 40)
-                                        
-                                        if colorHex == hex {
-                                            Circle()
-                                                .strokeBorder(Color.white, lineWidth: 2)
-                                                .frame(width: 40, height: 40)
-                                            
-                                            Image(systemName: "checkmark")
-                                                .foregroundColor(.white)
-                                                .font(.system(size: 16, weight: .bold))
-                                        }
-                                    }
-                                }
-                            }
-                            
-                            // ランダムカラーオプション
+                    TextEditor(text: $description)
+                        .frame(minHeight: 100)
+                }
+                
+                Section(header: Text("カラー")) {
+                    LazyVGrid(columns: [
+                        GridItem(.flexible()),
+                        GridItem(.flexible()),
+                        GridItem(.flexible()),
+                        GridItem(.flexible()),
+                        GridItem(.flexible())
+                    ], spacing: 16) {
+                        ForEach(colorPalette, id: \.self) { hex in
                             Button(action: {
-                                let colors = colorPalette
-                                colorHex = colors.randomElement() ?? "#4A90E2"
+                                colorHex = hex
                             }) {
                                 ZStack {
                                     Circle()
-                                        .fill(Color.gray.opacity(0.2))
-                                        .frame(width: 40, height: 40)
+                                        .fill(Color(hex: hex) ?? .blue)
+                                        .frame(width: 32, height: 32)
                                     
-                                    Image(systemName: "dice")
-                                        .foregroundColor(DesignSystem.Colors.textPrimary)
-                                        .font(.system(size: 16))
+                                    if colorHex == hex {
+                                        Image(systemName: "checkmark")
+                                            .foregroundColor(.white)
+                                            .font(.system(size: 16, weight: .bold))
+                                    }
                                 }
                             }
                         }
-                        .padding()
-                        .background(DesignSystem.Colors.card)
-                        .cornerRadius(DesignSystem.CornerRadius.medium)
                     }
+                    .padding(.vertical, 8)
+                }
+                
+                Section(header: Text("期限日")) {
+                    Toggle("期限を設定", isOn: $hasDueDate)
                     
-                    // 期限日設定
-                    VStack(alignment: .leading, spacing: DesignSystem.Spacing.s) {
-                        Toggle("期限日", isOn: $hasDueDate)
-                            .font(DesignSystem.Typography.font(size: DesignSystem.Typography.headline))
-                            .toggleStyle(SwitchToggleStyle(tint: DesignSystem.Colors.primary))
-                        
-                        if hasDueDate {
-                            HStack {
-                                Text(dueDate.formatted())
-                                    .font(DesignSystem.Typography.font(size: DesignSystem.Typography.body))
-                                    .foregroundColor(DesignSystem.Colors.textPrimary)
-                                
-                                Spacer()
-                                
-                                Button(action: {
-                                    showingDueDatePicker.toggle()
-                                }) {
-                                    Image(systemName: "calendar")
-                                        .foregroundColor(DesignSystem.Colors.primary)
-                                }
-                            }
-                            .padding()
-                            .background(DesignSystem.Colors.card)
-                            .cornerRadius(DesignSystem.CornerRadius.medium)
-                            
-                            if showingDueDatePicker {
-                                DatePicker("", selection: $dueDate, displayedComponents: .date)
-                                    .datePickerStyle(GraphicalDatePickerStyle())
-                                    .labelsHidden()
-                                    .padding()
-                                    .background(DesignSystem.Colors.card)
-                                    .cornerRadius(DesignSystem.CornerRadius.medium)
-                            }
-                        }
+                    if hasDueDate {
+                        DatePicker("期限日", selection: $dueDate, displayedComponents: .date)
                     }
                 }
-                .padding()
             }
-            .navigationTitle("プロジェクトを編集")
-            .navigationBarTitleDisplayMode(.inline)
+            .navigationTitle("プロジェクト編集")
             .navigationBarItems(
                 leading: Button("キャンセル") {
                     presentationMode.wrappedValue.dismiss()
@@ -629,13 +532,178 @@ struct TaskCreationViewWithProject: View {
     
     @Environment(\.presentationMode) var presentationMode
     @EnvironmentObject var taskViewModel: TaskViewModel
+    @EnvironmentObject var projectViewModel: ProjectViewModel
+    @EnvironmentObject var tagViewModel: TagViewModel
+    
+    // タスクプロパティ
+    @State private var title: String = ""
+    @State private var description: String = ""
+    @State private var priority: Priority = .medium
+    @State private var status: TaskStatus = .notStarted
+    @State private var dueDate: Date = Date().adding(days: 1) ?? Date()
+    @State private var hasDueDate: Bool = false
+    @State private var selectedTagIds: [UUID] = []
     
     var body: some View {
-        TaskCreationView()
-            .onAppear {
-                // ここでプロジェクトを選択状態にするロジックを追加する
-                // TaskCreationViewの実装に依存するため、実際の実装方法は調整が必要
+        NavigationView {
+            ScrollView {
+                VStack(spacing: DesignSystem.Spacing.m) {
+                    // タイトル入力
+                    VStack(alignment: .leading, spacing: DesignSystem.Spacing.xs) {
+                        Text("タイトル")
+                            .font(DesignSystem.Typography.font(size: DesignSystem.Typography.subheadline))
+                            .foregroundColor(DesignSystem.Colors.textSecondary)
+                        
+                        TextField("タスクのタイトルを入力", text: $title)
+                            .font(DesignSystem.Typography.font(size: DesignSystem.Typography.body))
+                            .padding()
+                            .background(DesignSystem.Colors.card)
+                            .cornerRadius(DesignSystem.CornerRadius.medium)
+                    }
+                    
+                    // 説明入力
+                    VStack(alignment: .leading, spacing: DesignSystem.Spacing.xs) {
+                        Text("説明（任意）")
+                            .font(DesignSystem.Typography.font(size: DesignSystem.Typography.subheadline))
+                            .foregroundColor(DesignSystem.Colors.textSecondary)
+                        
+                        TextEditor(text: $description)
+                            .frame(minHeight: 100)
+                            .padding()
+                            .background(DesignSystem.Colors.card)
+                            .cornerRadius(DesignSystem.CornerRadius.medium)
+                    }
+                    
+                    // 優先度選択
+                    VStack(alignment: .leading, spacing: DesignSystem.Spacing.xs) {
+                        Text("優先度")
+                            .font(DesignSystem.Typography.font(size: DesignSystem.Typography.subheadline))
+                            .foregroundColor(DesignSystem.Colors.textSecondary)
+                        
+                        HStack {
+                            ForEach(Priority.allCases) { priorityOption in
+                                Button(action: {
+                                    priority = priorityOption
+                                }) {
+                                    VStack {
+                                        Circle()
+                                            .fill(priority == priorityOption ? Color.priorityColor(priorityOption) : Color.priorityColor(priorityOption).opacity(0.3))
+                                            .frame(width: 40, height: 40)
+                                            .overlay(
+                                                Image(systemName: priorityIcon(for: priorityOption))
+                                                    .foregroundColor(.white)
+                                            )
+                                        
+                                        Text(priorityOption.title)
+                                            .font(DesignSystem.Typography.font(size: DesignSystem.Typography.caption1))
+                                            .foregroundColor(priority == priorityOption ? DesignSystem.Colors.textPrimary : DesignSystem.Colors.textSecondary)
+                                    }
+                                }
+                                .frame(maxWidth: .infinity)
+                            }
+                        }
+                    }
+                    
+                    // 期限日設定
+                    VStack(alignment: .leading, spacing: DesignSystem.Spacing.xs) {
+                        Toggle("期限日", isOn: $hasDueDate)
+                            .font(DesignSystem.Typography.font(size: DesignSystem.Typography.subheadline))
+                            .toggleStyle(SwitchToggleStyle(tint: DesignSystem.Colors.primary))
+                        
+                        if hasDueDate {
+                            DatePicker("", selection: $dueDate, displayedComponents: .date)
+                                .datePickerStyle(CompactDatePickerStyle())
+                                .labelsHidden()
+                                .padding(.vertical, DesignSystem.Spacing.xs)
+                        }
+                    }
+                    
+                    // タグ選択
+                    if !tagViewModel.tags.isEmpty {
+                        VStack(alignment: .leading, spacing: DesignSystem.Spacing.xs) {
+                            Text("タグ（任意）")
+                                .font(DesignSystem.Typography.font(size: DesignSystem.Typography.subheadline))
+                                .foregroundColor(DesignSystem.Colors.textSecondary)
+                            
+                            TagSelectorView(tags: tagViewModel.tags, selectedTagIds: $selectedTagIds)
+                        }
+                    }
+                }
+                .padding()
             }
+            .background(DesignSystem.Colors.background.edgesIgnoringSafeArea(.all))
+            .navigationTitle("新規タスク")
+            .navigationBarItems(
+                leading: Button("キャンセル") {
+                    presentationMode.wrappedValue.dismiss()
+                },
+                trailing: Button("保存") {
+                    saveTask()
+                }
+                .disabled(title.isEmpty)
+            )
+        }
+    }
+    
+    // 優先度に応じたアイコンを取得
+    private func priorityIcon(for priority: Priority) -> String {
+        switch priority {
+        case .low:
+            return "arrow.down"
+        case .medium:
+            return "minus"
+        case .high:
+            return "exclamationmark"
+        }
+    }
+    
+    // タスクを保存
+    private func saveTask() {
+        if title.isEmpty { return }
+        
+        var task = TMTask(
+            title: title,
+            description: description.isEmpty ? nil : description,
+            priority: priority,
+            status: status,
+            projectId: projectId,
+            tagIds: selectedTagIds
+        )
+        
+        if hasDueDate {
+            task.dueDate = dueDate
+        }
+        
+        taskViewModel.addTask(task)
+        presentationMode.wrappedValue.dismiss()
+    }
+}
+
+// シンプルな統計カード
+struct StatCardSimple: View {
+    var title: String
+    var value: String
+    var iconName: String
+    var color: Color
+    
+    var body: some View {
+        VStack(spacing: 8) {
+            Image(systemName: iconName)
+                .font(.system(size: 20))
+                .foregroundColor(color)
+            
+            Text(value)
+                .font(DesignSystem.Typography.font(size: DesignSystem.Typography.headline, weight: .bold))
+                .foregroundColor(DesignSystem.Colors.textPrimary)
+            
+            Text(title)
+                .font(DesignSystem.Typography.font(size: DesignSystem.Typography.caption1))
+                .foregroundColor(DesignSystem.Colors.textSecondary)
+        }
+        .frame(maxWidth: .infinity)
+        .padding(DesignSystem.Spacing.s)
+        .background(color.opacity(0.1))
+        .cornerRadius(DesignSystem.CornerRadius.medium)
     }
 }
 
@@ -660,22 +728,7 @@ enum ProjectTaskFilter: CaseIterable {
     }
 }
 
-extension Project {
-    // Project型からTMProject型への変換拡張
-    var asTMProject: TMProject {
-        return TMProject(
-            id: self.id ?? UUID(),
-            name: self.name ?? "",
-            description: self.projectDescription,
-            colorHex: self.colorHex ?? "#4A90E2",
-            creationDate: self.creationDate ?? Date(),
-            dueDate: self.dueDate,
-            completionDate: self.completionDate,
-            taskIds: self.tasks?.compactMap { ($0 as? Task)?.id } ?? []
-        )
-    }
-}
-
+// プレビュー
 struct ProjectDetailView_Previews: PreviewProvider {
     static var previews: some View {
         NavigationView {
@@ -684,12 +737,13 @@ struct ProjectDetailView_Previews: PreviewProvider {
             let project = Project(context: context)
             project.id = UUID()
             project.name = "サンプルプロジェクト"
-            project.projectDescription = "これはサンプルプロジェクトです"
+            project.projectDescription = "これはサンプルプロジェクトの説明です"
             project.colorHex = "#4A90E2"
             
             return ProjectDetailView(project: project)
                 .environmentObject(TaskViewModel())
                 .environmentObject(ProjectViewModel())
+                .environmentObject(TagViewModel())
         }
     }
 }

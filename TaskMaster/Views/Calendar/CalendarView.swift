@@ -309,7 +309,7 @@ struct CalendarView: View {
                 ForEach(tasks) { event in
                     if let tmTask = taskViewModel.tasks.first(where: { $0.id == event.id }) {
                         NavigationLink(destination: TaskDetailView(taskId: event.id)) {
-                            TaskRowView(task: tmTask)
+                            SimpleTaskRowView(task: tmTask)
                         }
                         .buttonStyle(PlainButtonStyle())
                         .background(DesignSystem.Colors.card)
@@ -351,5 +351,13 @@ struct CalendarView: View {
         } else {
             return DesignSystem.Colors.textPrimary
         }
+    }
+}
+
+// プレビュー
+struct CalendarView_Previews: PreviewProvider {
+    static var previews: some View {
+        CalendarView()
+            .environmentObject(TaskViewModel())
     }
 }
