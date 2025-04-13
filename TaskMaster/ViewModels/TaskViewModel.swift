@@ -190,6 +190,11 @@ class TaskViewModel: ObservableObject {
         } else {
             updatedTask.status = .completed
             updatedTask.completionDate = Date()
+            
+            // 繰り返しタスクの場合、次回の繰り返しを作成
+            if task.isRepeating {
+                RepeatTaskService.shared.createNextOccurrence(for: updatedTask)
+            }
         }
         
         updateTask(updatedTask)

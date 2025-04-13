@@ -26,11 +26,20 @@ struct SimpleTaskRowView: View {
             // タスク情報
             VStack(alignment: .leading, spacing: DesignSystem.Spacing.xxs) {
                 // タスクタイトル
-                Text(task.title)
-                    .font(DesignSystem.Typography.font(size: DesignSystem.Typography.callout, weight: isCompleted ? .regular : .medium))
-                    .foregroundColor(isCompleted ? DesignSystem.Colors.textSecondary : DesignSystem.Colors.textPrimary)
-                    .strikethrough(isCompleted)
-                    .lineLimit(1)
+                HStack(spacing: DesignSystem.Spacing.xs) {
+                    Text(task.title)
+                        .font(DesignSystem.Typography.font(size: DesignSystem.Typography.callout, weight: isCompleted ? .regular : .medium))
+                        .foregroundColor(isCompleted ? DesignSystem.Colors.textSecondary : DesignSystem.Colors.textPrimary)
+                        .strikethrough(isCompleted)
+                        .lineLimit(1)
+                    
+                    // 繰り返しアイコン（繰り返しタスクの場合）
+                    if task.isRepeating {
+                        Image(systemName: "arrow.clockwise")
+                            .font(.system(size: 12))
+                            .foregroundColor(DesignSystem.Colors.primary)
+                    }
+                }
                 
                 HStack(spacing: DesignSystem.Spacing.s) {
                     // 優先度マーク

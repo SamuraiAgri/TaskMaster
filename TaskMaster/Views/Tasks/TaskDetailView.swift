@@ -56,6 +56,23 @@ struct TaskDetailView: View {
                             }
                         }
                         
+                        // 繰り返し情報（繰り返しタスクの場合）
+                        if task.isRepeating {
+                            HStack {
+                                if task.repeatType == .custom, let customValue = task.repeatCustomValue {
+                                    CustomRepeatIndicator(repeatValue: customValue)
+                                } else {
+                                    RepeatIndicator(repeatType: task.repeatType)
+                                }
+                                
+                                Spacer()
+                                
+                                Text(getRepeatDescription(task))
+                                    .font(DesignSystem.Typography.font(size: DesignSystem.Typography.caption1))
+                                    .foregroundColor(DesignSystem.Colors.textSecondary)
+                            }
+                        }
+                        
                         // 完了ボタン
                         Button(action: {
                             taskViewModel.toggleTaskCompletion(task)
@@ -232,6 +249,41 @@ struct TaskDetailView: View {
         .background(DesignSystem.Colors.background.edgesIgnoringSafeArea(.all))
     }
     
+    // 繰り返しの説明文を取得
+    private func getRepeatDescription(_ task: TMTask) -> String {
+        if !task.isRepeating {
+            return ""
+        }
+        
+        switch task.repeatType {
+        case .none:
+            return ""
+        case .daily:
+            return "毎日繰り返し"
+        case .weekdays:
+            return "平日（月-金）繰り返し"
+        case .weekly:
+            return "毎週繰り返し"
+        case .monthly:
+            return "毎月繰り返し"
+        case .yearly:
+            return "毎年繰り返し"
+        case .custom:
+            if let value = task.repeatCustomValue {
+                if value % 30 == 0 {
+                    let months = value / 30
+                    return months == 1 ? "毎月繰り返し" : "\(months)ヶ月ごとに繰り返し"
+                } else if value % 7 == 0 {
+                    let weeks = value / 7
+                    return weeks == 1 ? "毎週繰り返し" : "\(weeks)週間ごとに繰り返し"
+                } else {
+                    return value == 1 ? "毎日繰り返し" : "\(value)日ごとに繰り返し"
+                }
+            }
+            return "カスタム繰り返し"
+        }
+    }
+    
     // タスクとその関連情報を読み込む
     private func loadTaskDetails() {
         tmTask = taskViewModel.getTask(by: taskId)
@@ -264,98 +316,6 @@ struct TaskDetailView: View {
             newProject.dueDate = tmProject.dueDate
             newProject.completionDate = tmProject.completionDate
             return newProject
-        }
-    }
-}
-
-// シンプルなタスク編集ビュー
-struct SimpleTaskEditView: View {
-    @Environment(\.presentationMode) var presentationMode
-    var task: TMTask
-    var onSave: (TMTask) -> Void
-    
-    // 状態変数
-    @State private var title: String
-    @State private var description: String
-    @State private var priority: Priority
-    @State private var hasDueDate: Bool
-    @State private var dueDate: Date
-    
-    init(task: TMTask, onSave: @escaping (TMTask) -> Void) {
-        self.task = task
-        self.onSave = onSave
-        
-        // 状態変数の初期化
-        self._title = State(initialValue: task.title)
-        self._description = State(initialValue: task.description ?? "")
-        self._priority = State(initialValue: task.priority)
-        self._hasDueDate = State(initialValue: task.dueDate != nil)
-        self._dueDate = State(initialValue: task.dueDate ?? Date())
-    }
-    
-    var body: some View {
-        NavigationView {
-            Form {
-                Section(header: Text("基本情報")) {
-                    TextField("タイトル", text: $title)
-                    
-                    TextEditor(text: $description)
-                        .frame(minHeight: 100)
-                }
-                
-                Section(header: Text("優先度")) {
-                    Picker("優先度", selection: $priority) {
-                        ForEach(Priority.allCases) { priority in
-                            HStack {
-                                Circle()
-                                    .fill(Color.priorityColor(priority))
-                                    .frame(width: 10, height: 10)
-                                
-                                Text(priority.title)
-                            }
-                            .tag(priority)
-                        }
-                    }
-                    .pickerStyle(SegmentedPickerStyle())
-                }
-                
-                Section(header: Text("期限日")) {
-                    Toggle("期限を設定", isOn: $hasDueDate)
-                    
-                    if hasDueDate {
-                        DatePicker("期限日", selection: $dueDate, displayedComponents: .date)
-                    }
-                }
-            }
-            .navigationTitle("タスクの編集")
-            .navigationBarItems(
-                leading: Button("キャンセル") {
-                    presentationMode.wrappedValue.dismiss()
-                },
-                trailing: Button("保存") {
-                    var updatedTask = task
-                    updatedTask.title = title
-                    updatedTask.description = description.isEmpty ? nil : description
-                    updatedTask.priority = priority
-                    updatedTask.dueDate = hasDueDate ? dueDate : nil
-                    
-                    onSave(updatedTask)
-                    presentationMode.wrappedValue.dismiss()
-                }
-                .disabled(title.isEmpty)
-            )
-        }
-    }
-}
-
-// プレビュー
-struct TaskDetailView_Previews: PreviewProvider {
-    static var previews: some View {
-        NavigationView {
-            TaskDetailView(taskId: UUID())
-                .environmentObject(TaskViewModel())
-                .environmentObject(ProjectViewModel())
-                .environmentObject(TagViewModel())
         }
     }
 }

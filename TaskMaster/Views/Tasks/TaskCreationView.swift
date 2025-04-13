@@ -17,6 +17,12 @@ struct TaskCreationView: View {
     @State private var selectedTagIds: [UUID] = []
     @State private var hasDueDate: Bool = false
     
+    // 繰り返し設定
+    @State private var isRepeating: Bool = false
+    @State private var repeatType: RepeatType = .daily
+    @State private var repeatCustomValue: Int? = nil
+    @State private var showingRepeatSettings = false
+    
     // バリデーション
     @State private var titleError: String? = nil
     
@@ -35,6 +41,10 @@ struct TaskCreationView: View {
                             .padding()
                             .background(DesignSystem.Colors.card)
                             .cornerRadius(DesignSystem.CornerRadius.medium)
+                            .overlay(
+                                RoundedRectangle(cornerRadius: DesignSystem.CornerRadius.medium)
+                                    .stroke(titleError != nil ? DesignSystem.Colors.error : Color.clear, lineWidth: 1)
+                            )
                             .onChange(of: title) { oldValue, newValue in
                                 if newValue.isEmpty {
                                     titleError = "タイトルは必須です"
@@ -104,6 +114,47 @@ struct TaskCreationView: View {
                                 .datePickerStyle(CompactDatePickerStyle())
                                 .labelsHidden()
                                 .padding(.vertical, DesignSystem.Spacing.xs)
+                        }
+                    }
+                    
+                    // 繰り返し設定
+                    VStack(alignment: .leading, spacing: DesignSystem.Spacing.xs) {
+                        Button(action: {
+                            showingRepeatSettings = true
+                        }) {
+                            HStack {
+                                Text("繰り返し")
+                                    .font(DesignSystem.Typography.font(size: DesignSystem.Typography.subheadline))
+                                    .foregroundColor(DesignSystem.Colors.textSecondary)
+                                
+                                Spacer()
+                                
+                                if isRepeating {
+                                    if repeatType == .custom, let customValue = repeatCustomValue {
+                                        CustomRepeatIndicator(repeatValue: customValue)
+                                    } else {
+                                        RepeatIndicator(repeatType: repeatType)
+                                    }
+                                } else {
+                                    Text("なし")
+                                        .font(DesignSystem.Typography.font(size: DesignSystem.Typography.subheadline))
+                                        .foregroundColor(DesignSystem.Colors.textSecondary)
+                                }
+                                
+                                Image(systemName: "chevron.right")
+                                    .font(.system(size: 14))
+                                    .foregroundColor(DesignSystem.Colors.textSecondary)
+                            }
+                            .padding()
+                            .background(DesignSystem.Colors.card)
+                            .cornerRadius(DesignSystem.CornerRadius.medium)
+                        }
+                        .sheet(isPresented: $showingRepeatSettings) {
+                            RepeatSettingsView(
+                                isRepeating: $isRepeating,
+                                repeatType: $repeatType,
+                                repeatCustomValue: $repeatCustomValue
+                            )
                         }
                     }
                     
@@ -206,7 +257,10 @@ struct TaskCreationView: View {
             priority: priority,
             status: status,
             projectId: selectedProjectId,
-            tagIds: selectedTagIds
+            tagIds: selectedTagIds,
+            isRepeating: isRepeating,
+            repeatType: isRepeating ? repeatType : .none,
+            repeatCustomValue: isRepeating && repeatType == .custom ? repeatCustomValue : nil
         )
         
         // 期限日の設定
